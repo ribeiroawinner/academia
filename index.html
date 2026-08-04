@@ -3,7 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Minimal Dark Protocol</title>
+  <title>Treino e Dieta</title>
+  
+  <!-- FAVICON EMBUTIDO (Estética Halftone Runner) -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23050505'/><g fill='%23ffffff'><circle cx='70' cy='28' r='4'/><circle cx='68' cy='36' r='3.5'/><circle cx='60' cy='32' r='4'/><circle cx='52' cy='30' r='4.5'/><circle cx='44' cy='32' r='4'/><circle cx='36' cy='36' r='3.5'/><circle cx='68' cy='46' r='4.5'/><circle cx='72' cy='48' r='3.5'/><circle cx='62' cy='48' r='4'/><circle cx='54' cy='42' r='4.5'/><circle cx='46' cy='46' r='4.5'/><circle cx='40' cy='52' r='4'/><circle cx='34' cy='58' r='3.5'/><circle cx='48' cy='58' r='4.5'/><circle cx='56' cy='62' r='4'/><circle cx='58' cy='70' r='3.5'/><circle cx='48' cy='72' r='4'/><circle cx='46' cy='64' r='4.5'/><circle cx='38' cy='66' r='4'/><circle cx='30' cy='68' r='4.5'/><circle cx='24' cy='70' r='3.5'/></g></svg>">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23050505'/><g fill='%23ffffff'><circle cx='70' cy='28' r='4'/><circle cx='68' cy='36' r='3.5'/><circle cx='60' cy='32' r='4'/><circle cx='52' cy='30' r='4.5'/><circle cx='44' cy='32' r='4'/><circle cx='36' cy='36' r='3.5'/><circle cx='68' cy='46' r='4.5'/><circle cx='72' cy='48' r='3.5'/><circle cx='62' cy='48' r='4'/><circle cx='54' cy='42' r='4.5'/><circle cx='46' cy='46' r='4.5'/><circle cx='40' cy='52' r='4'/><circle cx='34' cy='58' r='3.5'/><circle cx='48' cy='58' r='4.5'/><circle cx='56' cy='62' r='4'/><circle cx='58' cy='70' r='3.5'/><circle cx='48' cy='72' r='4'/><circle cx='46' cy='64' r='4.5'/><circle cx='38' cy='66' r='4'/><circle cx='30' cy='68' r='4.5'/><circle cx='24' cy='70' r='3.5'/></g></svg>">
+
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,700;0,800;1,400;1,700&display=swap" rel="stylesheet">
@@ -23,7 +28,6 @@
       border-color: rgba(255, 255, 255, 0.3);
     }
 
-    /* Destaques de Status e Tags */
     .chip-highlight {
       background: rgba(30, 30, 35, 0.9);
       border: 1px solid rgba(255, 255, 255, 0.35);
@@ -50,7 +54,6 @@
       color: #86efac;
     }
 
-    /* Dia Ativo no Treino */
     .day-active {
       background: #ffffff !important;
       color: #000000 !important;
@@ -91,7 +94,7 @@
 
   <main class="p-4 max-w-md md:max-w-2xl lg:max-w-4xl mx-auto space-y-5">
     
-    <!-- CARD HIDRATAÇÃO SIMPLIFICADO -->
+    <!-- CARD HIDRATAÇÃO -->
     <section class="p-4 sm:p-5 rounded-2xl arch-card space-y-3 relative overflow-hidden">
       <div class="flex justify-between items-center">
         <div>
@@ -102,13 +105,11 @@
               x-text="`${(garrafasBebeidas * 1.5).toFixed(1)}L / 4.5L`"></span>
       </div>
 
-      <!-- Barra Visual de Progresso de Água -->
       <div class="w-full bg-zinc-900 rounded-full h-2 border border-zinc-800 overflow-hidden">
         <div class="bg-sky-400 h-full transition-all duration-500 shadow-[0_0_10px_rgba(56,189,248,0.5)]"
              :style="`width: ${Math.min((garrafasBebeidas / 3) * 100, 100)}%`"></div>
       </div>
 
-      <!-- Controle Intuitivo de Adicionar/Remover Água -->
       <div class="grid grid-cols-2 gap-2 pt-1">
         <button @click="removerAgua()" 
                 class="p-2 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white font-mono font-bold text-xs active:scale-95 transition">
@@ -146,8 +147,6 @@
                 <div class="flex-1 min-w-0 space-y-2">
                   <div class="flex justify-between items-center gap-2">
                     <span class="font-extrabold text-xs sm:text-sm text-white tracking-tight transition-all duration-200" :class="ref.concluido ? 'line-through text-zinc-500' : ''" x-text="ref.nome"></span>
-                    
-                    <!-- Selo de Horário Reativo ao Relógio Real -->
                     <span class="text-[10px] font-mono font-extrabold px-2.5 py-0.5 rounded-md shrink-0 transition-all"
                           :class="ref.concluido ? 'chip-success' : 
                                  (isAtrasado(ref.horarioFim) ? 'chip-alert' : 
@@ -173,7 +172,6 @@
     <!-- TAB TREINO -->
     <template x-if="tab === 'treino'">
       <div class="space-y-4 tab-fade-enter">
-        <!-- Day Picker Slider com Destaque no Dia Ativo -->
         <div class="flex gap-2 overflow-x-auto no-scrollbar py-1">
           <template x-for="(t, idx) in treinos" :key="idx">
             <button @click="setTreino(idx)" 
@@ -197,7 +195,6 @@
           <span class="text-xs font-mono font-black chip-highlight px-3 py-1 rounded-md" x-text="`${treinos[activeTreino].exercicios.filter(e => e.concluido).length}/${treinos[activeTreino].exercicios.length}`"></span>
         </div>
 
-        <!-- Cards de Exercício com Destaques de Cor nas Séries e Repetições -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
           <template x-for="(ex, index) in treinos[activeTreino].exercicios" :key="index">
             <div class="p-4 rounded-2xl arch-card arch-card-hover transition-all duration-300 flex flex-col justify-between" 
@@ -209,7 +206,6 @@
                   <div class="flex justify-between items-start gap-2">
                     <span class="font-bold text-xs sm:text-sm text-white leading-tight transition-all duration-200" :class="ex.concluido ? 'line-through text-zinc-500' : ''" x-text="ex.nome"></span>
                     <div class="flex flex-col items-end gap-1 shrink-0">
-                      <!-- Destaque Amarelo nas Séries/Reps -->
                       <span class="text-[10px] font-mono font-extrabold chip-sets px-2 py-0.5 rounded" x-text="`${ex.series} sets × ${ex.reps}`"></span>
                       <span class="text-[9px] font-mono text-zinc-400" x-text="`REST: ${ex.descanso}`"></span>
                     </div>
@@ -343,10 +339,10 @@
           setInterval(() => {
             this.now = new Date();
             this.checkAutoReset();
-          }, 15000); // Checagem de horário a cada 15 segundos
+          }, 15000);
         },
         setTreinoAutoDia() {
-          const currentDayIndex = new Date().getDay(); // 0 = Dom, 1 = Seg, 2 = Ter, 3 = Qua, 4 = Qui, 5 = Sex, 6 = Sáb
+          const currentDayIndex = new Date().getDay();
           if (currentDayIndex >= 1 && currentDayIndex <= 5) {
             this.activeTreino = currentDayIndex - 1;
           } else {
