@@ -114,7 +114,7 @@
 
   <!-- Banner notificações -->
   <div id="notif-banner" class="hidden fixed top-0 left-0 right-0 z-50 bg-zinc-900 border-b border-zinc-700 px-4 py-3 flex items-center justify-between gap-3">
-    <p class="text-xs text-zinc-300 font-mono">🔔 Ativar lembretes de refeição?</p>
+    <p class="text-xs text-zinc-300 font-mono">Ativar lembretes de refeição?</p>
     <div class="flex gap-2 shrink-0">
       <button onclick="document.getElementById('notif-banner').remove()" class="text-[10px] font-mono text-zinc-500 hover:text-zinc-300 px-2 py-1">Não</button>
       <button onclick="solicitarNotificacoes().then(ok => { if(ok){ document.getElementById('notif-banner').remove(); const d=JSON.parse(localStorage.getItem('my_dieta_v5')||'[]'); agendarNotificacoes(d); } })" 
@@ -556,9 +556,7 @@
 
     // ── PWA + Notificações ──────────────────────────────────────────
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').then(reg => {
-        console.log('SW registrado:', reg.scope);
-      });
+      navigator.serviceWorker.register('/sw.js').catch(e => console.warn('SW erro:', e));
     }
 
     async function solicitarNotificacoes() {
@@ -570,41 +568,43 @@
       return perm === 'granted';
     }
 
-    // Agenda notificações locais via setTimeout (funciona sem servidor push)
-    function agendarNotificacoes(dieta) {
-      if (Notification.permission !== 'granted') return;
+    // Remove numeração: "1. Café da Manhã" → "Café da Manhã"
+    function nomeLimpo(nome) {
+      return nome.replace(/^\d+\.\s*/, '');
+    }
 
-      // Remove numeração do nome: "1. Café da Manhã" → "Café da Manhã"
-      function nomelimpo(nome) {
-        return nome.replace(/^\d+\.\s*/, '');
-      }
+    // Verifica se refeição já foi concluída no momento do disparo
+    function jaFez(horario) {
+      const atual = JSON.parse(localStorage.getItem('my_dieta_v5') || '[]');
+      const item = atual.find(i => i.horario === horario);
+      return item && item.concluido;
+    }
 
-      // Verifica se refeição já foi concluída no momento do disparo
-      function jaFez(horario) {
-        const atual = JSON.parse(localStorage.getItem('my_dieta_v5') || '[]');
-        const item = atual.find(i => i.horario === horario);
-        return item && item.concluido;
-      }
-
-      // Agrupa refeições com horários a menos de 15 min de diferença
-      function agrupar(lista) {
-        const grupos = [];
-        const usados = new Set();
-        lista.forEach((ref, i) => {
-          if (usados.has(i)) return;
-          const [h1, m1] = ref.horario.split(':').map(Number);
-          const grupo = [ref];
-          usados.add(i);
-          lista.forEach((ref2, j) => {
-            if (usados.has(j)) return;
-            const [h2, m2] = ref2.horario.split(':').map(Number);
-            const diff = Math.abs((h1 * 60 + m1) - (h2 * 60 + m2));
-            if (diff <= 15) { grupo.push(ref2); usados.add(j); }
-          });
-          grupos.push(grupo);
+    // Agrupa refeições com horários a menos de 15 min de diferença
+    function agrupar(lista) {
+      const grupos = [];
+      const usados = new Set();
+      lista.forEach((ref, i) => {
+        if (usados.has(i)) return;
+        const [h1, m1] = ref.horario.split(':').map(Number);
+        const grupo = [ref];
+        usados.add(i);
+        lista.forEach((ref2, j) => {
+          if (usados.has(j)) return;
+          const [h2, m2] = ref2.horario.split(':').map(Number);
+          const diff = Math.abs((h1 * 60 + m1) - (h2 * 60 + m2));
+          if (diff <= 15) { grupo.push(ref2); usados.add(j); }
         });
-        return grupos;
-      }
+        grupos.push(grupo);
+      });
+      return grupos;
+    }
+
+    // Agenda notificações locais via setTimeout
+    function agendarNotificacoes(dieta) {
+      if (!dieta || !dieta.length) return;
+      if (typeof Notification === 'undefined') return;
+      if (Notification.permission !== 'granted') return;
 
       const pendentes = dieta.filter(r => !r.concluido);
       const grupos = agrupar(pendentes);
@@ -614,8 +614,8 @@
         const [h, m] = primeiro.horario.split(':').map(Number);
 
         const titulo = grupo.length > 1
-          ? grupo.map(r => nomeimpo(r.nome)).join(' + ')
-          : nomeimpo(primeiro.nome);
+          ? grupo.map(r => nomeLimpo(r.nome)).join(' + ')
+          : nomeLimpo(primeiro.nome);
 
         const corpo = grupo.map(r => r.itens).join(' | ');
 
@@ -626,12 +626,13 @@
         if (ms15 > 0) {
           setTimeout(() => {
             if (grupo.some(r => !jaFez(r.horario))) {
-              new Notification(titulo + ' às ' + primeiro.horario, {
-                body: corpo,
-                icon: '/favicon.png',
-                tag: 'aviso-' + primeiro.horario,
-                silent: false
-              });
+              try {
+                new Notification(titulo + ' às ' + primeiro.horario, {
+                  body: corpo,
+                  icon: '/favicon.png',
+                  tag: 'aviso-' + primeiro.horario
+                });
+              } catch(e) { console.warn('Notif erro:', e); }
             }
           }, ms15);
         }
@@ -643,32 +644,27 @@
         if (msExato > 0) {
           setTimeout(() => {
             if (grupo.some(r => !jaFez(r.horario))) {
-              new Notification('Hora de comer — ' + titulo, {
-                body: corpo,
-                icon: '/favicon.png',
-                tag: 'hora-' + primeiro.horario,
-                requireInteraction: true,
-                silent: false
-              });
+              try {
+                new Notification('Hora de comer — ' + titulo, {
+                  body: corpo,
+                  icon: '/favicon.png',
+                  tag: 'hora-' + primeiro.horario,
+                  requireInteraction: true
+                });
+              } catch(e) { console.warn('Notif erro:', e); }
             }
           }, msExato);
         }
       });
-
-      // helper fora do escopo interno
-      function nomeimpo(nome) {
-        return nome.replace(/^\d+\.\s*/, '');
-      }
     }
 
-    // Inicializa notificações ao carregar
-    document.addEventListener('DOMContentLoaded', async () => {
+    // Inicializa após Alpine carregar (window.load é mais seguro que DOMContentLoaded com Alpine)
+    window.addEventListener('load', () => {
+      if (typeof Notification === 'undefined') return;
       if (Notification.permission === 'granted') {
-        // Já tem permissão, agenda direto
         const dados = JSON.parse(localStorage.getItem('my_dieta_v5') || '[]');
         if (dados.length) agendarNotificacoes(dados);
       } else if (Notification.permission !== 'denied') {
-        // Mostra banner sutil para pedir permissão
         const banner = document.getElementById('notif-banner');
         if (banner) banner.classList.remove('hidden');
       }
