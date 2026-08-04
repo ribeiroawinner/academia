@@ -574,45 +574,79 @@
     function agendarNotificacoes(dieta) {
       if (Notification.permission !== 'granted') return;
 
-      dieta.forEach(ref => {
-        if (ref.concluido) return;
+      // Remove numeração do nome: "1. Café da Manhã" → "Café da Manhã"
+      function nomelimpo(nome) {
+        return nome.replace(/^\d+\.\s*/, '');
+      }
 
-        const [h, m] = ref.horario.split(':').map(Number);
+      // Verifica se refeição já foi concluída no momento do disparo
+      function jaFez(horario) {
+        const atual = JSON.parse(localStorage.getItem('my_dieta_v5') || '[]');
+        const item = atual.find(i => i.horario === horario);
+        return item && item.concluido;
+      }
 
-        // Aviso 30 min antes
-        const aviso30 = new Date();
-        aviso30.setHours(h, m - 30, 0, 0);
-        const ms30 = aviso30 - new Date();
-        if (ms30 > 0) {
+      // Agrupa refeições com horários a menos de 15 min de diferença
+      function agrupar(lista) {
+        const grupos = [];
+        const usados = new Set();
+        lista.forEach((ref, i) => {
+          if (usados.has(i)) return;
+          const [h1, m1] = ref.horario.split(':').map(Number);
+          const grupo = [ref];
+          usados.add(i);
+          lista.forEach((ref2, j) => {
+            if (usados.has(j)) return;
+            const [h2, m2] = ref2.horario.split(':').map(Number);
+            const diff = Math.abs((h1 * 60 + m1) - (h2 * 60 + m2));
+            if (diff <= 15) { grupo.push(ref2); usados.add(j); }
+          });
+          grupos.push(grupo);
+        });
+        return grupos;
+      }
+
+      const pendentes = dieta.filter(r => !r.concluido);
+      const grupos = agrupar(pendentes);
+
+      grupos.forEach(grupo => {
+        const primeiro = grupo[0];
+        const [h, m] = primeiro.horario.split(':').map(Number);
+
+        const titulo = grupo.length > 1
+          ? grupo.map(r => nomeimpo(r.nome)).join(' + ')
+          : nomeimpo(primeiro.nome);
+
+        const corpo = grupo.map(r => r.itens).join(' | ');
+
+        // Aviso 15 min antes
+        const aviso15 = new Date();
+        aviso15.setHours(h, m - 15, 0, 0);
+        const ms15 = aviso15 - new Date();
+        if (ms15 > 0) {
           setTimeout(() => {
-            const atual = JSON.parse(localStorage.getItem('my_dieta_v5') || '[]');
-            const item = atual.find(i => i.horario === ref.horario);
-            if (item && item.concluido) return;
-            if (Notification.permission === 'granted') {
-              new Notification(ref.nome + ' em 30 minutos', {
-                body: ref.itens,
+            if (grupo.some(r => !jaFez(r.horario))) {
+              new Notification(titulo + ' às ' + primeiro.horario, {
+                body: corpo,
                 icon: '/favicon.png',
-                tag: 'aviso-' + ref.horario,
+                tag: 'aviso-' + primeiro.horario,
                 silent: false
               });
             }
-          }, ms30);
+          }, ms15);
         }
 
-        // Aviso na hora exata
+        // Aviso na hora exata — travado até tocar
         const avisoExato = new Date();
         avisoExato.setHours(h, m, 0, 0);
         const msExato = avisoExato - new Date();
         if (msExato > 0) {
           setTimeout(() => {
-            const atual = JSON.parse(localStorage.getItem('my_dieta_v5') || '[]');
-            const item = atual.find(i => i.horario === ref.horario);
-            if (item && item.concluido) return;
-            if (Notification.permission === 'granted') {
-              new Notification('Hora de comer — ' + ref.nome, {
-                body: ref.itens,
+            if (grupo.some(r => !jaFez(r.horario))) {
+              new Notification('Hora de comer — ' + titulo, {
+                body: corpo,
                 icon: '/favicon.png',
-                tag: 'hora-' + ref.horario,
+                tag: 'hora-' + primeiro.horario,
                 requireInteraction: true,
                 silent: false
               });
@@ -620,6 +654,11 @@
           }, msExato);
         }
       });
+
+      // helper fora do escopo interno
+      function nomeimpo(nome) {
+        return nome.replace(/^\d+\.\s*/, '');
+      }
     }
 
     // Inicializa notificações ao carregar
