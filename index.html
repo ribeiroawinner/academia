@@ -21,22 +21,27 @@
     }
     .arch-card-hover:hover {
       border-color: rgba(255, 255, 255, 0.3);
-      transform: translateY(-1px);
     }
 
+    /* Destaques de Status e Tags */
     .chip-highlight {
       background: rgba(30, 30, 35, 0.9);
       border: 1px solid rgba(255, 255, 255, 0.35);
       box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
       color: #ffffff;
-      transition: all 0.2s ease;
+    }
+    .chip-sets {
+      background: rgba(45, 35, 10, 0.9);
+      border: 1px solid rgba(245, 158, 11, 0.8);
+      box-shadow: 0 0 10px rgba(245, 158, 11, 0.25);
+      color: #fbbf24;
     }
     .chip-alert {
-      background: rgba(45, 10, 15, 0.9);
-      border: 1px solid rgba(244, 63, 94, 0.8);
-      box-shadow: 0 0 12px rgba(244, 63, 94, 0.3);
-      color: #fda4af;
-      animation: alertPulse 2s infinite;
+      background: rgba(60, 10, 15, 0.95);
+      border: 1px solid rgba(244, 63, 94, 0.9);
+      box-shadow: 0 0 14px rgba(244, 63, 94, 0.4);
+      color: #fecdd3;
+      animation: alertPulse 1.8s infinite;
     }
     .chip-success {
       background: rgba(10, 35, 20, 0.9);
@@ -45,9 +50,18 @@
       color: #86efac;
     }
 
+    /* Dia Ativo no Treino */
+    .day-active {
+      background: #ffffff !important;
+      color: #000000 !important;
+      font-weight: 900 !important;
+      border-color: #ffffff !important;
+      box-shadow: 0 0 15px rgba(255, 255, 255, 0.35) !important;
+    }
+
     @keyframes alertPulse {
       0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.75; transform: scale(0.97); }
+      50% { opacity: 0.8; transform: scale(0.96); }
     }
 
     .led-line {
@@ -56,7 +70,7 @@
     }
 
     .tab-fade-enter {
-      animation: fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      animation: fadeIn 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     }
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(4px); }
@@ -77,27 +91,33 @@
 
   <main class="p-4 max-w-md md:max-w-2xl lg:max-w-4xl mx-auto space-y-5">
     
-    <!-- CARD HIDRATAÇÃO -->
+    <!-- CARD HIDRATAÇÃO SIMPLIFICADO -->
     <section class="p-4 sm:p-5 rounded-2xl arch-card space-y-3 relative overflow-hidden">
       <div class="flex justify-between items-center">
         <div>
-          <h3 class="text-sm sm:text-base font-extrabold text-white">Meta Diária: 3L ~ 4.5L</h3>
+          <span class="text-[9px] font-mono font-bold tracking-widest text-zinc-400 uppercase">Hidratação</span>
+          <h3 class="text-sm sm:text-base font-extrabold text-white">Meta: 4.5L / dia</h3>
         </div>
         <span class="text-xs font-mono font-black chip-highlight px-3 py-1 rounded-md"
               x-text="`${(garrafasBebeidas * 1.5).toFixed(1)}L / 4.5L`"></span>
       </div>
 
-      <div class="led-line my-2"></div>
+      <!-- Barra Visual de Progresso de Água -->
+      <div class="w-full bg-zinc-900 rounded-full h-2 border border-zinc-800 overflow-hidden">
+        <div class="bg-sky-400 h-full transition-all duration-500 shadow-[0_0_10px_rgba(56,189,248,0.5)]"
+             :style="`width: ${Math.min((garrafasBebeidas / 3) * 100, 100)}%`"></div>
+      </div>
 
-      <div class="grid grid-cols-3 gap-2.5">
-        <template x-for="i in 3" :key="i">
-          <button @click="toggleGarrafa(i)" 
-                  :class="garrafasBebeidas >= i ? 'bg-white text-black border-white shadow-[0_0_15px_rgba(255,255,255,0.3)] scale-[1.02]' : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:border-zinc-700'"
-                  class="p-2.5 rounded-xl border transition-all duration-200 flex flex-col items-center gap-1 active:scale-95">
-            <span class="text-xs font-mono font-black transition-all" x-text="garrafasBebeidas >= i ? 'DONE' : '1.5L'"></span>
-            <span class="text-[9px] font-mono font-bold uppercase tracking-wider" x-text="`Garrafa ${i}`"></span>
-          </button>
-        </template>
+      <!-- Controle Intuitivo de Adicionar/Remover Água -->
+      <div class="grid grid-cols-2 gap-2 pt-1">
+        <button @click="removerAgua()" 
+                class="p-2 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white font-mono font-bold text-xs active:scale-95 transition">
+          - 1.5L
+        </button>
+        <button @click="adicionarAgua()" 
+                class="p-2 rounded-xl bg-white text-black font-mono font-black text-xs active:scale-95 transition shadow-[0_0_12px_rgba(255,255,255,0.2)]">
+          + 1.5L
+        </button>
       </div>
     </section>
 
@@ -126,11 +146,13 @@
                 <div class="flex-1 min-w-0 space-y-2">
                   <div class="flex justify-between items-center gap-2">
                     <span class="font-extrabold text-xs sm:text-sm text-white tracking-tight transition-all duration-200" :class="ref.concluido ? 'line-through text-zinc-500' : ''" x-text="ref.nome"></span>
-                    <span class="text-[10px] font-mono font-extrabold px-2.5 py-0.5 rounded-md shrink-0"
+                    
+                    <!-- Selo de Horário Reativo ao Relógio Real -->
+                    <span class="text-[10px] font-mono font-extrabold px-2.5 py-0.5 rounded-md shrink-0 transition-all"
                           :class="ref.concluido ? 'chip-success' : 
                                  (isAtrasado(ref.horarioFim) ? 'chip-alert' : 
                                  'chip-highlight')" 
-                          x-text="ref.horario"></span>
+                          x-text="ref.concluido ? 'CONCLUÍDO' : (isAtrasado(ref.horarioFim) ? `ATRASADO (${ref.horario})` : ref.horario)"></span>
                   </div>
                   
                   <p class="text-xs text-zinc-300 font-medium leading-relaxed" x-text="ref.itens"></p>
@@ -151,29 +173,31 @@
     <!-- TAB TREINO -->
     <template x-if="tab === 'treino'">
       <div class="space-y-4 tab-fade-enter">
+        <!-- Day Picker Slider com Destaque no Dia Ativo -->
         <div class="flex gap-2 overflow-x-auto no-scrollbar py-1">
           <template x-for="(t, idx) in treinos" :key="idx">
             <button @click="setTreino(idx)" 
-                    :class="activeTreino === idx ? 'bg-white text-black font-black border-white shadow-[0_0_12px_rgba(255,255,255,0.2)] scale-[1.02]' : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:border-zinc-700'"
+                    :class="activeTreino === idx ? 'day-active scale-[1.02]' : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:border-zinc-700'"
                     class="px-4 py-2 rounded-xl text-xs font-mono uppercase tracking-wider whitespace-nowrap border transition-all duration-200 active:scale-95">
               <span x-text="t.dia"></span>
             </button>
           </template>
         </div>
 
-        <div class="p-3.5 rounded-xl bg-zinc-900/90 border-l-4 border-white text-zinc-300 text-xs leading-relaxed space-y-1">
-          <span class="font-mono font-black uppercase text-[9px] text-zinc-400 block tracking-widest">Aviso de Aquecimento</span>
+        <div class="p-3.5 rounded-xl bg-zinc-900/90 border-l-4 border-amber-400 text-zinc-300 text-xs leading-relaxed space-y-1">
+          <span class="font-mono font-black uppercase text-[9px] text-amber-400 block tracking-widest">Aviso de Aquecimento</span>
           <p>Realize 1 a 2 séries leves com carga reduzida no primeiro exercício antes da carga de trabalho.</p>
         </div>
 
         <div class="p-4 rounded-2xl arch-card flex justify-between items-center">
           <div>
             <span class="text-[9px] font-mono font-bold tracking-widest text-zinc-400 uppercase">Sessão Ativa</span>
-            <h3 class="text-sm sm:text-base font-black text-white" x-text="treinos[activeTreino].foco"></h3>
+            <h3 class="text-sm sm:text-base font-black text-amber-300 tracking-wide" x-text="treinos[activeTreino].foco"></h3>
           </div>
           <span class="text-xs font-mono font-black chip-highlight px-3 py-1 rounded-md" x-text="`${treinos[activeTreino].exercicios.filter(e => e.concluido).length}/${treinos[activeTreino].exercicios.length}`"></span>
         </div>
 
+        <!-- Cards de Exercício com Destaques de Cor nas Séries e Repetições -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
           <template x-for="(ex, index) in treinos[activeTreino].exercicios" :key="index">
             <div class="p-4 rounded-2xl arch-card arch-card-hover transition-all duration-300 flex flex-col justify-between" 
@@ -185,7 +209,8 @@
                   <div class="flex justify-between items-start gap-2">
                     <span class="font-bold text-xs sm:text-sm text-white leading-tight transition-all duration-200" :class="ex.concluido ? 'line-through text-zinc-500' : ''" x-text="ex.nome"></span>
                     <div class="flex flex-col items-end gap-1 shrink-0">
-                      <span class="text-[10px] font-mono font-extrabold chip-highlight px-2 py-0.5 rounded" x-text="`${ex.series} sets × ${ex.reps}`"></span>
+                      <!-- Destaque Amarelo nas Séries/Reps -->
+                      <span class="text-[10px] font-mono font-extrabold chip-sets px-2 py-0.5 rounded" x-text="`${ex.series} sets × ${ex.reps}`"></span>
                       <span class="text-[9px] font-mono text-zinc-400" x-text="`REST: ${ex.descanso}`"></span>
                     </div>
                   </div>
@@ -194,7 +219,7 @@
                     <div>
                       <label class="text-[8px] font-mono font-bold uppercase tracking-widest text-zinc-400 block mb-0.5">Carga</label>
                       <input type="text" inputmode="decimal" x-model="ex.carga" @change="save()" placeholder="24kg" 
-                             class="bg-zinc-950 border border-zinc-700 focus:border-white rounded-lg px-2.5 py-1 w-full text-xs text-white placeholder-zinc-600 focus:outline-none font-mono transition-colors duration-150">
+                             class="bg-zinc-950 border border-zinc-700 focus:border-amber-400 rounded-lg px-2.5 py-1 w-full text-xs text-amber-300 font-bold placeholder-zinc-600 focus:outline-none font-mono transition-colors duration-150">
                     </div>
                     <div>
                       <label class="text-[8px] font-mono font-bold uppercase tracking-widest text-zinc-400 block mb-0.5">Notas</label>
@@ -318,14 +343,14 @@
           setInterval(() => {
             this.now = new Date();
             this.checkAutoReset();
-          }, 30000);
+          }, 15000); // Checagem de horário a cada 15 segundos
         },
         setTreinoAutoDia() {
-          const currentDayIndex = new Date().getDay(); // 0 = Domingo, 1 = Segunda, 2 = Terça, 3 = Quarta, 4 = Quinta, 5 = Sexta, 6 = Sábado
+          const currentDayIndex = new Date().getDay(); // 0 = Dom, 1 = Seg, 2 = Ter, 3 = Qua, 4 = Qui, 5 = Sex, 6 = Sáb
           if (currentDayIndex >= 1 && currentDayIndex <= 5) {
             this.activeTreino = currentDayIndex - 1;
           } else {
-            this.activeTreino = 0; // Fim de semana abre na Segunda por padrão
+            this.activeTreino = 0;
           }
         },
         checkAutoReset() {
@@ -339,13 +364,17 @@
         setTreino(idx) {
           this.activeTreino = idx;
         },
-        toggleGarrafa(index) {
-          if (this.garrafasBebeidas === index) {
-            this.garrafasBebeidas = index - 1;
-          } else {
-            this.garrafasBebeidas = index;
+        adicionarAgua() {
+          if (this.garrafasBebeidas < 3) {
+            this.garrafasBebeidas++;
+            this.save();
           }
-          this.save();
+        },
+        removerAgua() {
+          if (this.garrafasBebeidas > 0) {
+            this.garrafasBebeidas--;
+            this.save();
+          }
         },
         isAtrasado(horarioFimStr) {
           if (!horarioFimStr) return false;
