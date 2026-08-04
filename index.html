@@ -387,7 +387,7 @@
           setInterval(() => {
             this.now = new Date();
             this.checkAutoReset();
-          }, 15000);
+          }, 10000);
           // Agenda notificações se já tiver permissão
           if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
             setTimeout(() => agendarNotificacoes(this.dieta), 500);
@@ -431,21 +431,21 @@
           limitTime.setHours(hours, minutes, 0, 0);
           return this.now > limitTime;
         },
-        // Urgente = dentro de 45 minutos do horário de início
+        // Urgente = dentro de 60 minutos do horário de início
         isUrgente(horarioStr) {
           if (!horarioStr) return false;
           const [hours, minutes] = horarioStr.split(':').map(Number);
           const refTime = new Date();
           refTime.setHours(hours, minutes, 0, 0);
           const diff = (refTime - this.now) / 60000; // minutos
-          return diff >= 0 && diff <= 45;
+          return diff >= 0 && diff <= 60;
         },
-        // Progresso de 0 a 100 dentro da janela de urgência (45 min antes até horário fim)
+        // Progresso de 0 a 100 dentro da janela de urgência (60 min antes até horário fim)
         getProgresso(horarioStr, horarioFimStr) {
           if (!horarioStr || !horarioFimStr) return 0;
           const [sh, sm] = horarioStr.split(':').map(Number);
           const [eh, em] = horarioFimStr.split(':').map(Number);
-          const start = new Date(); start.setHours(sh, sm - 45, 0, 0); // 45 min antes
+          const start = new Date(); start.setHours(sh, sm - 60, 0, 0); // 60 min antes
           const end = new Date();   end.setHours(eh, em, 0, 0);
           const total = end - start;
           const elapsed = this.now - start;

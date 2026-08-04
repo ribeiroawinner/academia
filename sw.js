@@ -1,4 +1,4 @@
-const CACHE_NAME = 'academia-v1';
+const CACHE_NAME = 'academia-v2';
 const urlsToCache = ['/', '/index.html', '/favicon.png', '/manifest.json'];
 
 self.addEventListener('install', event => {
