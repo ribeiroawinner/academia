@@ -257,16 +257,39 @@
                     </div>
                   </div>
                   
-                  <div class="grid grid-cols-2 gap-2 pt-2 border-t border-zinc-800">
+                  <div class="space-y-2 pt-2 border-t border-zinc-800">
+                    <!-- Carga com botões + e - -->
                     <div>
-                      <label class="text-[8px] font-mono font-bold uppercase tracking-widest text-zinc-400 block mb-0.5">Carga</label>
-                      <input type="text" inputmode="decimal" x-model="ex.carga" @change="save()" placeholder="24kg" 
-                             class="bg-zinc-950 border border-zinc-700 focus:border-green-400 rounded-lg px-2.5 py-1 w-full text-xs text-green-300 font-bold placeholder-zinc-600 focus:outline-none font-mono transition-colors duration-150">
+                      <div class="flex items-center justify-between mb-0.5">
+                        <label class="text-[8px] font-mono font-bold uppercase tracking-widest text-zinc-400">Carga</label>
+                        <!-- Indicador de evolução -->
+                        <template x-if="getCargaAnterior(activeTreino, index)">
+                          <span class="text-[8px] font-mono"
+                                :class="getCargaNum(ex.carga) > getCargaNum(getCargaAnterior(activeTreino, index)) ? 'text-green-400' : (getCargaNum(ex.carga) < getCargaNum(getCargaAnterior(activeTreino, index)) ? 'text-red-400' : 'text-zinc-500')"
+                                x-text="getCargaNum(ex.carga) > getCargaNum(getCargaAnterior(activeTreino, index)) ? '↑ ' + getCargaAnterior(activeTreino, index) : (getCargaNum(ex.carga) < getCargaNum(getCargaAnterior(activeTreino, index)) ? '↓ ' + getCargaAnterior(activeTreino, index) : '= ' + getCargaAnterior(activeTreino, index))"></span>
+                        </template>
+                      </div>
+                      <div class="flex items-center gap-1">
+                        <button @click="decrementarCarga(ex)" class="bg-zinc-900 border border-zinc-700 text-zinc-300 rounded-lg px-2.5 py-1 text-xs font-mono font-bold active:scale-95 transition shrink-0">−</button>
+                        <input type="text" inputmode="decimal" x-model="ex.carga" @change="save()" :placeholder="getCargaAnterior(activeTreino, index) || '0kg'"
+                               class="bg-zinc-950 border border-zinc-700 focus:border-green-400 rounded-lg px-2 py-1 w-full text-xs text-green-300 font-bold placeholder-zinc-600 focus:outline-none font-mono text-center transition-colors duration-150">
+                        <button @click="incrementarCarga(ex)" class="bg-zinc-900 border border-zinc-700 text-zinc-300 rounded-lg px-2.5 py-1 text-xs font-mono font-bold active:scale-95 transition shrink-0">+</button>
+                      </div>
                     </div>
+                    <!-- Notas com botões RPE rápidos -->
                     <div>
                       <label class="text-[8px] font-mono font-bold uppercase tracking-widest text-zinc-400 block mb-0.5">Notas</label>
-                      <input type="text" x-model="ex.notas" @change="save()" placeholder="RPE 8" 
-                             class="bg-zinc-950 border border-zinc-700 focus:border-white rounded-lg px-2.5 py-1 w-full text-xs text-white placeholder-zinc-600 focus:outline-none font-mono transition-colors duration-150">
+                      <input type="text" x-model="ex.notas" @change="save()" placeholder="RPE 8"
+                             class="bg-zinc-950 border border-zinc-700 focus:border-white rounded-lg px-2.5 py-1 w-full text-xs text-white placeholder-zinc-600 focus:outline-none font-mono transition-colors duration-150 mb-1.5">
+                      <div class="flex gap-1 flex-wrap">
+                        <template x-for="tag in ['RPE 7','RPE 8','RPE 9','Falha','Fácil']" :key="tag">
+                          <button @click="ex.notas = tag; save()"
+                                  class="text-[9px] font-mono px-2 py-0.5 rounded border transition active:scale-95"
+                                  :class="ex.notas === tag ? 'bg-white text-black border-white' : 'bg-zinc-900 text-zinc-400 border-zinc-700 hover:border-zinc-500'">
+                            <span x-text="tag"></span>
+                          </button>
+                        </template>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -543,6 +566,52 @@
           localStorage.setItem('my_dieta_v5', JSON.stringify(this.dieta));
           localStorage.setItem('my_treinos_v4', JSON.stringify(this.treinos));
           localStorage.setItem('my_agua_v1', JSON.stringify(this.garrafasBebeidas));
+          // Salva histórico de cargas com data
+          this.salvarHistorico();
+        },
+        salvarHistorico() {
+          const hoje = new Date().toDateString();
+          const hist = JSON.parse(localStorage.getItem('my_hist_cargas') || '{}');
+          this.treinos.forEach((treino, ti) => {
+            treino.exercicios.forEach((ex, ei) => {
+              if (ex.carga) {
+                if (!hist[ti]) hist[ti] = {};
+                if (!hist[ti][ei]) hist[ti][ei] = [];
+                // Atualiza ou adiciona entrada de hoje
+                const idx = hist[ti][ei].findIndex(h => h.data === hoje);
+                if (idx >= 0) hist[ti][ei][idx].carga = ex.carga;
+                else hist[ti][ei].push({ data: hoje, carga: ex.carga });
+                // Mantém só últimas 30 entradas
+                if (hist[ti][ei].length > 30) hist[ti][ei].shift();
+              }
+            });
+          });
+          localStorage.setItem('my_hist_cargas', JSON.stringify(hist));
+        },
+        // Retorna carga da sessão anterior (diferente de hoje)
+        getCargaAnterior(ti, ei) {
+          const hoje = new Date().toDateString();
+          const hist = JSON.parse(localStorage.getItem('my_hist_cargas') || '{}');
+          const entries = hist[ti] && hist[ti][ei] ? hist[ti][ei] : [];
+          const anterior = [...entries].reverse().find(h => h.data !== hoje);
+          return anterior ? anterior.carga : null;
+        },
+        getCargaNum(cargaStr) {
+          if (!cargaStr) return 0;
+          return parseFloat(String(cargaStr).replace(/[^\d.]/g, '')) || 0;
+        },
+        incrementarCarga(ex) {
+          const num = this.getCargaNum(ex.carga);
+          const step = num < 10 ? 1 : num < 50 ? 2.5 : 5;
+          ex.carga = (num + step) + 'kg';
+          this.save();
+        },
+        decrementarCarga(ex) {
+          const num = this.getCargaNum(ex.carga);
+          const step = num <= 10 ? 1 : num <= 50 ? 2.5 : 5;
+          const novo = Math.max(0, num - step);
+          ex.carga = novo + 'kg';
+          this.save();
         },
         executeReset(resetNotes = false) {
           this.dieta.forEach(item => item.concluido = false);
