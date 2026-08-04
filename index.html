@@ -276,20 +276,11 @@
                         <button @click="incrementarCarga(ex)" class="bg-zinc-900 border border-zinc-700 text-zinc-300 rounded-lg px-2.5 py-1 text-xs font-mono font-bold active:scale-95 transition shrink-0">+</button>
                       </div>
                     </div>
-                    <!-- Notas com botões RPE rápidos -->
+                    <!-- Notas -->
                     <div>
                       <label class="text-[8px] font-mono font-bold uppercase tracking-widest text-zinc-400 block mb-0.5">Notas</label>
-                      <input type="text" x-model="ex.notas" @change="save()" placeholder="RPE 8"
-                             class="bg-zinc-950 border border-zinc-700 focus:border-white rounded-lg px-2.5 py-1 w-full text-xs text-white placeholder-zinc-600 focus:outline-none font-mono transition-colors duration-150 mb-1.5">
-                      <div class="flex gap-1 flex-wrap">
-                        <template x-for="tag in ['RPE 7','RPE 8','RPE 9','Falha','Fácil']" :key="tag">
-                          <button @click="ex.notas = tag; save()"
-                                  class="text-[9px] font-mono px-2 py-0.5 rounded border transition active:scale-95"
-                                  :class="ex.notas === tag ? 'bg-white text-black border-white' : 'bg-zinc-900 text-zinc-400 border-zinc-700 hover:border-zinc-500'">
-                            <span x-text="tag"></span>
-                          </button>
-                        </template>
-                      </div>
+                      <input type="text" x-model="ex.notas" @change="save()" placeholder="Observações"
+                             class="bg-zinc-950 border border-zinc-700 focus:border-white rounded-lg px-2.5 py-1 w-full text-xs text-white placeholder-zinc-600 focus:outline-none font-mono transition-colors duration-150">
                     </div>
                   </div>
                 </div>
