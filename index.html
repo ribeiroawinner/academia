@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Treino e Dieta</title>
+  
+  <!-- FAVICON: compatível com desktop e iOS/Safari -->
+  <link rel="icon" href="favicon.png?v=4">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon.png?v=4">
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon.png?v=4">
+  <link rel="shortcut icon" type="image/png" href="favicon.png?v=4">
+  <link rel="apple-touch-icon" href="favicon.png?v=4">
+  <link rel="apple-touch-icon" sizes="180x180" href="favicon.png?v=4">
+  <link rel="apple-touch-icon" sizes="152x152" href="favicon.png?v=4">
+  <link rel="apple-touch-icon" sizes="120x120" href="favicon.png?v=4">
+
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Treino e Dieta">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,700;0,800;1,400;1,700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #050505; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+    .arch-card {
+      background: rgba(18, 18, 20, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.9);
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .arch-card-hover:hover {
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    .chip-highlight {
+      background: rgba(30, 30, 35, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+      color: #ffffff;
+    }
+    .chip-sets {
+      background: rgba(45, 35, 10, 0.9);
+      border: 1px solid rgba(245, 158, 11, 0.8);
+      box-shadow: 0 0 10px rgba(245, 158, 11, 0.25);
+      color: #fbbf24;
+    }
+    .chip-alert {
+      background: rgba(60, 10, 15, 0.95);
+      border: 1px solid rgba(244, 63, 94, 0.9);
+      box-shadow: 0 0 14px rgba(244, 63, 94, 0.4);
+      color: #fecdd3;
+      animation: alertPulse 1.8s infinite;
+    }
+    .chip-success {
+      background: rgba(10, 35, 20, 0.9);
+      border: 1px solid rgba(34, 197, 94, 0.8);
+      box-shadow: 0 0 12px rgba(34, 197, 94, 0.25);
+      color: #86efac;
+    }
+
+    .day-active {
+      background: #ffffff !important;
+      color: #000000 !important;
+      font-weight: 900 !important;
+      border-color: #ffffff !important;
+      box-shadow: 0 0 15px rgba(255, 255, 255, 0.35) !important;
+    }
+
+    @keyframes alertPulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.8; transform: scale(0.96); }
+    }
+
+    .led-line {
+      height: 1px;
+      background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.6) 50%, rgba(255,255,255,0) 100%);
+    }
+
+    .tab-fade-enter {
+      animation: fadeIn 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body class="text-zinc-100 min-h-screen pb-28 antialiased selection:bg-white selection:text-black" x-data="appData()" x-init="initApp(); checkAutoReset()">
+
+  <!-- Barra Superior -->
+  <header class="sticky top-0 z-30 bg-black/80 backdrop-blur-xl border-b border-zinc-800/80 px-4 py-3">
+    <div class="max-w-md md:max-w-2xl lg:max-w-4xl mx-auto flex items-center justify-center">
+      <button @click="resetDayManual()" class="text-[10px] font-mono font-bold bg-zinc-900 hover:bg-zinc-800 active:scale-95 text-zinc-200 px-4 py-1.5 rounded-lg border border-zinc-700 transition-all duration-150 flex items-center gap-1.5 shadow-sm">
+        Reset Manual
+      </button>
+    </div>
+  </header>
+
+  <main class="p-4 max-w-md md:max-w-2xl lg:max-w-4xl mx-auto space-y-5">
+    
+    <!-- CARD HIDRATAÇÃO -->
+    <section class="p-4 sm:p-5 rounded-2xl arch-card space-y-3 relative overflow-hidden">
+      <div class="flex justify-between items-center">
+        <div>
+          <span class="text-[9px] font-mono font-bold tracking-widest text-zinc-400 uppercase">Hidratação</span>
+          <h3 class="text-sm sm:text-base font-extrabold text-white">Meta: 4.5L / dia</h3>
+        </div>
+        <span class="text-xs font-mono font-black chip-highlight px-3 py-1 rounded-md"
+              x-text="`${(garrafasBebeidas * 1.5).toFixed(1)}L / 4.5L`"></span>
+      </div>
+
+      <div class="w-full bg-zinc-900 rounded-full h-2 border border-zinc-800 overflow-hidden">
+        <div class="bg-sky-400 h-full transition-all duration-500 shadow-[0_0_10px_rgba(56,189,248,0.5)]"
+             :style="`width: ${Math.min((garrafasBebeidas / 3) * 100, 100)}%`"></div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2 pt-1">
+        <button @click="removerAgua()" 
+                class="p-2 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white font-mono font-bold text-xs active:scale-95 transition">
+          - 1.5L
+        </button>
+        <button @click="adicionarAgua()" 
+                class="p-2 rounded-xl bg-white text-black font-mono font-black text-xs active:scale-95 transition shadow-[0_0_12px_rgba(255,255,255,0.2)]">
+          + 1.5L
+        </button>
+      </div>
+    </section>
+
+    <!-- TAB DIETA -->
+    <template x-if="tab === 'dieta'">
+      <div class="space-y-4 tab-fade-enter">
+        <div class="p-4 rounded-2xl arch-card space-y-3">
+          <div class="flex justify-between items-center">
+            <span class="text-[9px] font-mono font-bold tracking-widest text-zinc-400 uppercase">Nutrição // Cronograma</span>
+            <span class="text-xs font-mono font-black chip-highlight px-3 py-0.5 rounded-md" 
+                  x-text="`${dieta.filter(i => i.concluido).length}/${dieta.length} DONE`"></span>
+          </div>
+          <div class="w-full bg-zinc-900 rounded-full h-1.5 border border-zinc-800 overflow-hidden">
+            <div class="bg-white h-full transition-all duration-500 ease-out shadow-[0_0_10px_rgba(255,255,255,0.8)]"
+                 :style="`width: ${(dieta.filter(i => i.concluido).length / dieta.length) * 100}%`"></div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <template x-for="(ref, index) in dieta" :key="index">
+            <div class="p-4 rounded-2xl arch-card arch-card-hover transition-all duration-300 flex flex-col justify-between" 
+                 :class="ref.concluido ? 'opacity-35 bg-zinc-950/40 border-zinc-900 scale-[0.99]' : ''">
+              <label class="flex items-start gap-3.5 cursor-pointer">
+                <input type="checkbox" x-model="ref.concluido" @change="save()" 
+                       class="mt-1 w-4 h-4 accent-white bg-zinc-950 border-zinc-700 rounded cursor-pointer shrink-0 transition-transform active:scale-90">
+                <div class="flex-1 min-w-0 space-y-2">
+                  <div class="flex justify-between items-center gap-2">
+                    <span class="font-extrabold text-xs sm:text-sm text-white tracking-tight transition-all duration-200" :class="ref.concluido ? 'line-through text-zinc-500' : ''" x-text="ref.nome"></span>
+                    <span class="text-[10px] font-mono font-extrabold px-2.5 py-0.5 rounded-md shrink-0 transition-all"
+                          :class="ref.concluido ? 'chip-success' : 
+                                 (isAtrasado(ref.horarioFim) ? 'chip-alert' : 
+                                 'chip-highlight')" 
+                          x-text="ref.concluido ? 'CONCLUÍDO' : (isAtrasado(ref.horarioFim) ? `ATRASADO (${ref.horario})` : ref.horario)"></span>
+                  </div>
+                  
+                  <p class="text-xs text-zinc-300 font-medium leading-relaxed" x-text="ref.itens"></p>
+                  
+                  <template x-if="ref.obs">
+                    <div class="border-l-2 border-zinc-400 pl-2 py-0.5 mt-2">
+                      <p class="text-[10px] text-zinc-400 font-mono italic" x-text="ref.obs"></p>
+                    </div>
+                  </template>
+                </div>
+              </label>
+            </div>
+          </template>
+        </div>
+      </div>
+    </template>
+
+    <!-- TAB TREINO -->
+    <template x-if="tab === 'treino'">
+      <div class="space-y-4 tab-fade-enter">
+        <div class="flex gap-2 overflow-x-auto no-scrollbar py-1">
+          <template x-for="(t, idx) in treinos" :key="idx">
+            <button @click="setTreino(idx)" 
+                    :class="activeTreino === idx ? 'day-active scale-[1.02]' : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:border-zinc-700'"
+                    class="px-4 py-2 rounded-xl text-xs font-mono uppercase tracking-wider whitespace-nowrap border transition-all duration-200 active:scale-95">
+              <span x-text="t.dia"></span>
+            </button>
+          </template>
+        </div>
+
+        <div class="p-3.5 rounded-xl bg-zinc-900/90 border-l-4 border-amber-400 text-zinc-300 text-xs leading-relaxed space-y-1">
+          <span class="font-mono font-black uppercase text-[9px] text-amber-400 block tracking-widest">Aviso de Aquecimento</span>
+          <p>Realize 1 a 2 séries leves com carga reduzida no primeiro exercício antes da carga de trabalho.</p>
+        </div>
+
+        <div class="p-4 rounded-2xl arch-card flex justify-between items-center">
+          <div>
+            <span class="text-[9px] font-mono font-bold tracking-widest text-zinc-400 uppercase">Sessão Ativa</span>
+            <h3 class="text-sm sm:text-base font-black text-amber-300 tracking-wide" x-text="treinos[activeTreino].foco"></h3>
+          </div>
+          <span class="text-xs font-mono font-black chip-highlight px-3 py-1 rounded-md" x-text="`${treinos[activeTreino].exercicios.filter(e => e.concluido).length}/${treinos[activeTreino].exercicios.length}`"></span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <template x-for="(ex, index) in treinos[activeTreino].exercicios" :key="index">
+            <div class="p-4 rounded-2xl arch-card arch-card-hover transition-all duration-300 flex flex-col justify-between" 
+                 :class="ex.concluido ? 'opacity-35 bg-zinc-950/40 border-zinc-900 scale-[0.99]' : ''">
+              <div class="flex items-start gap-3.5">
+                <input type="checkbox" x-model="ex.concluido" @change="save()" 
+                       class="mt-1 w-4 h-4 accent-white bg-zinc-950 border-zinc-700 rounded cursor-pointer shrink-0 transition-transform active:scale-90">
+                <div class="flex-1 space-y-3 min-w-0">
+                  <div class="flex justify-between items-start gap-2">
+                    <span class="font-bold text-xs sm:text-sm text-white leading-tight transition-all duration-200" :class="ex.concluido ? 'line-through text-zinc-500' : ''" x-text="ex.nome"></span>
+                    <div class="flex flex-col items-end gap-1 shrink-0">
+                      <span class="text-[10px] font-mono font-extrabold chip-sets px-2 py-0.5 rounded" x-text="`${ex.series} sets × ${ex.reps}`"></span>
+                      <span class="text-[9px] font-mono text-zinc-400" x-text="`REST: ${ex.descanso}`"></span>
+                    </div>
+                  </div>
+                  
+                  <div class="grid grid-cols-2 gap-2 pt-2 border-t border-zinc-800">
+                    <div>
+                      <label class="text-[8px] font-mono font-bold uppercase tracking-widest text-zinc-400 block mb-0.5">Carga</label>
+                      <input type="text" inputmode="decimal" x-model="ex.carga" @change="save()" placeholder="24kg" 
+                             class="bg-zinc-950 border border-zinc-700 focus:border-amber-400 rounded-lg px-2.5 py-1 w-full text-xs text-amber-300 font-bold placeholder-zinc-600 focus:outline-none font-mono transition-colors duration-150">
+                    </div>
+                    <div>
+                      <label class="text-[8px] font-mono font-bold uppercase tracking-widest text-zinc-400 block mb-0.5">Notas</label>
+                      <input type="text" x-model="ex.notas" @change="save()" placeholder="RPE 8" 
+                             class="bg-zinc-950 border border-zinc-700 focus:border-white rounded-lg px-2.5 py-1 w-full text-xs text-white placeholder-zinc-600 focus:outline-none font-mono transition-colors duration-150">
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </template>
+
+    <!-- TAB GUIA E COMPRAS -->
+    <template x-if="tab === 'guia'">
+      <div class="space-y-4 tab-fade-enter">
+        <div class="p-4 rounded-2xl arch-card space-y-3">
+          <span class="text-[9px] font-mono font-bold uppercase tracking-widest text-zinc-400">Nutrição // Metas</span>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+            <div class="p-2 bg-zinc-950 rounded-xl border border-zinc-800">
+              <span class="text-[8px] font-mono text-zinc-400 block uppercase">Calorias</span>
+              <span class="text-xs font-mono font-black text-white">3120 kcal</span>
+            </div>
+            <div class="p-2 bg-zinc-950 rounded-xl border border-zinc-800">
+              <span class="text-[8px] font-mono text-zinc-400 block uppercase">Proteínas</span>
+              <span class="text-xs font-mono font-black text-white">142g</span>
+            </div>
+            <div class="p-2 bg-zinc-950 rounded-xl border border-zinc-800">
+              <span class="text-[8px] font-mono text-zinc-400 block uppercase">Carbos</span>
+              <span class="text-xs font-mono font-black text-white">420g</span>
+            </div>
+            <div class="p-2 bg-zinc-950 rounded-xl border border-zinc-800">
+              <span class="text-[8px] font-mono text-zinc-400 block uppercase">Gorduras</span>
+              <span class="text-xs font-mono font-black text-white">96g</span>
+            </div>
+          </div>
+          <p class="text-xs font-mono text-zinc-300 text-center pt-1">Meta de Peso: 55kg → 73kg</p>
+        </div>
+
+        <div class="p-4 rounded-2xl arch-card space-y-3">
+          <h3 class="text-xs font-mono font-black uppercase tracking-wider text-white">Lista de Compras (7 Dias)</h3>
+          
+          <div class="space-y-3 text-xs text-zinc-300 font-medium">
+            <div class="border-l border-zinc-700 pl-2.5">
+              <span class="text-[9px] font-mono font-bold text-zinc-400 block uppercase">Proteínas & Perecíveis</span>
+              <ul class="list-disc list-inside space-y-0.5 mt-1">
+                <li>1.4 kg Peito de frango cru</li>
+                <li>2 cartelas de ovos (35 unidades/semana)</li>
+              </ul>
+            </div>
+
+            <div class="border-l border-zinc-700 pl-2.5">
+              <span class="text-[9px] font-mono font-bold text-zinc-400 block uppercase">Carboidratos & Hortifruti</span>
+              <ul class="list-disc list-inside space-y-0.5 mt-1">
+                <li>1.1 kg Arroz branco cru</li>
+                <li>500 g Aveia em flocos</li>
+                <li>350 g Farinha de arroz</li>
+                <li>5 Litros de Leite integral</li>
+                <li>2 a 3 palmas de banana (~19 unidades)</li>
+                <li>560 g Brócolis fresco (ou 2 pacotes congelados 280g)</li>
+              </ul>
+            </div>
+
+            <div class="border-l border-zinc-700 pl-2.5">
+              <span class="text-[9px] font-mono font-bold text-zinc-400 block uppercase">Suplementos & Estoque</span>
+              <ul class="list-disc list-inside space-y-0.5 mt-1">
+                <li>2 pacotes de Pão de forma</li>
+                <li>1/4 de pote de Pasta de amendoim (~250g)</li>
+                <li>Azeite de Oliva Extravirgem</li>
+                <li>Creatina 250g</li>
+                <li>Hipercalórico Anabolic Mass 3kg</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="p-4 rounded-2xl arch-card space-y-2 text-xs text-zinc-300 leading-relaxed font-medium">
+          <h3 class="text-xs font-mono font-black uppercase tracking-wider text-white">Diretrizes Táticas</h3>
+          <p>• <strong>Sobrecarga Progressiva:</strong> Ao atingir o teto de repetições em todas as séries com boa postura, aumente a carga na sessão seguinte.</p>
+          <p>• <strong>Intervalos:</strong> 2 a 3 min em compostos pesados e 60 a 90 seg em isoladores.</p>
+          <p>• <strong>Regra de Estagnação:</strong> Se o peso em jejum estagnar por 2 semanas seguidas, amplie o arroz no almoço para 250g e no jantar para 300g.</p>
+        </div>
+      </div>
+    </template>
+
+  </main>
+
+  <!-- Bottom Nav -->
+  <nav class="fixed bottom-0 left-0 right-0 bg-black/80 backdrop-blur-2xl border-t border-zinc-800 p-3 z-30">
+    <div class="max-w-md md:max-w-2xl lg:max-w-4xl mx-auto grid grid-cols-3 gap-2">
+      <button @click="tab = 'dieta'" 
+              :class="tab === 'dieta' ? 'bg-white text-black font-extrabold border-white shadow-[0_0_10px_rgba(255,255,255,0.2)]' : 'bg-zinc-900 text-zinc-400 border-zinc-800'" 
+              class="flex items-center justify-center py-2.5 rounded-xl text-xs font-mono uppercase tracking-wider border transition-all duration-200 active:scale-95">
+        Dieta
+      </button>
+      <button @click="tab = 'treino'" 
+              :class="tab === 'treino' ? 'bg-white text-black font-extrabold border-white shadow-[0_0_10px_rgba(255,255,255,0.2)]' : 'bg-zinc-900 text-zinc-400 border-zinc-800'" 
+              class="flex items-center justify-center py-2.5 rounded-xl text-xs font-mono uppercase tracking-wider border transition-all duration-200 active:scale-95">
+        Treino
+      </button>
+      <button @click="tab = 'guia'" 
+              :class="tab === 'guia' ? 'bg-white text-black font-extrabold border-white shadow-[0_0_10px_rgba(255,255,255,0.2)]' : 'bg-zinc-900 text-zinc-400 border-zinc-800'" 
+              class="flex items-center justify-center py-2.5 rounded-xl text-[10px] sm:text-xs font-mono uppercase tracking-wider border transition-all duration-200 active:scale-95">
+        Guia e Compras
+      </button>
+    </div>
+  </nav>
+
+  <script>
+    function appData() {
+      return {
+        tab: 'dieta',
+        activeTreino: 0,
+        garrafasBebeidas: JSON.parse(localStorage.getItem('my_agua_v1')) || 0,
+        lastResetDate: localStorage.getItem('my_last_reset_date') || '',
+        now: new Date(),
+        initApp() {
+          this.setTreinoAutoDia();
+          setInterval(() => {
+            this.now = new Date();
+            this.checkAutoReset();
+          }, 15000);
+        },
+        setTreinoAutoDia() {
+          const currentDayIndex = new Date().getDay();
+          if (currentDayIndex >= 1 && currentDayIndex <= 5) {
+            this.activeTreino = currentDayIndex - 1;
+          } else {
+            this.activeTreino = 0;
+          }
+        },
+        checkAutoReset() {
+          const todayStr = new Date().toDateString();
+          if (this.lastResetDate !== todayStr) {
+            this.executeReset(false);
+            this.lastResetDate = todayStr;
+            localStorage.setItem('my_last_reset_date', todayStr);
+          }
+        },
+        setTreino(idx) {
+          this.activeTreino = idx;
+        },
+        adicionarAgua() {
+          if (this.garrafasBebeidas < 3) {
+            this.garrafasBebeidas++;
+            this.save();
+          }
+        },
+        removerAgua() {
+          if (this.garrafasBebeidas > 0) {
+            this.garrafasBebeidas--;
+            this.save();
+          }
+        },
+        isAtrasado(horarioFimStr) {
+          if (!horarioFimStr) return false;
+          const [hours, minutes] = horarioFimStr.split(':').map(Number);
+          const limitTime = new Date();
+          limitTime.setHours(hours, minutes, 0, 0);
+          return this.now > limitTime;
+        },
+        dieta: JSON.parse(localStorage.getItem('my_dieta_v5')) || [
+          { horario: '07:30', horarioFim: '09:00', nome: '1. Café da Manhã', itens: '2 fatias pão de forma + 2 bananas + 2 ovos mexidos', obs: 'Opcional: Café puro. Preparo: 3 min.', concluido: false },
+          { horario: '10:30', horarioFim: '11:30', nome: '2. Lanche da Manhã', itens: '3 ovos mexidos + 80g aveia em flocos', obs: 'Grelhe os ovos e prepare a aveia.', concluido: false },
+          { horario: '13:00', horarioFim: '14:30', nome: '3. Almoço', itens: '200g arroz + 80g brócolis + 100g frango + 1 colher azeite', obs: 'Adicione o azeite após aquecer.', concluido: false },
+          { horario: '16:00', horarioFim: '17:30', nome: '4. Shake Pré-Treino', itens: '400ml leite integral + 1 banana + 50g farinha de arroz', obs: 'Bater no liquidificador e beber antes do treino.', concluido: false },
+          { horario: '20:00', horarioFim: '20:45', nome: '5. Shake Pós-Treino', itens: '300ml água + 140g hipercalórico + 5g creatina', obs: 'Consumir na coqueteleira logo após o treino.', concluido: false },
+          { horario: '21:00', horarioFim: '22:00', nome: '6. Jantar', itens: '250g arroz + 100g frango + 1 colher azeite', obs: 'Sem brócolis para acelerar a digestão noturna.', concluido: false },
+          { horario: '23:00', horarioFim: '23:59', nome: '7. Ceia', itens: '2 fatias pão de forma + 2 col. pasta de amendoim + 250ml leite', obs: 'Monte o sanduíche e acompanhe com leite gelado.', concluido: false }
+        ],
+        treinos: JSON.parse(localStorage.getItem('my_treinos_v4')) || [
+          {
+            dia: 'Segunda',
+            foco: 'Upper (Superior)',
+            exercicios: [
+              { nome: 'Supino Inclinado (Halteres)', series: '3', reps: '8-10', descanso: '2-3 min', carga: '', notas: '', concluido: false },
+              { nome: 'Puxada Alta Pronada', series: '3', reps: '8-10', descanso: '2-3 min', carga: '', notas: '', concluido: false },
+              { nome: 'Desenvolvimento (Halteres)', series: '2', reps: '10-12', descanso: '60-90s', carga: '', notas: '', concluido: false },
+              { nome: 'Remada Cavalinho / Apoiada', series: '2', reps: '8-10', descanso: '2-3 min', carga: '', notas: '', concluido: false },
+              { nome: 'Elevação Lateral (Halteres)', series: '3', reps: '12-15', descanso: '60-90s', carga: '', notas: '', concluido: false },
+              { nome: 'Rosca Direta (Barra W)', series: '2', reps: '10-12', descanso: '60-90s', carga: '', notas: '', concluido: false },
+              { nome: 'Tríceps Testa (Halteres)', series: '2', reps: '10-12', descanso: '60-90s', carga: '', notas: '', concluido: false }
+            ]
+          },
+          {
+            dia: 'Terça',
+            foco: 'Lower (Inferior)',
+            exercicios: [
+              { nome: 'Agachamento Livre', series: '3', reps: '8-10', descanso: '2-3 min', carga: '', notas: '', concluido: false },
+              { nome: 'Leg Press 45°', series: '3', reps: '10-12', descanso: '2-3 min', carga: '', notas: '', concluido: false },
+              { nome: 'Cadeira Flexora', series: '3', reps: '10-12', descanso: '60-90s', carga: '', notas: '', concluido: false },
+              { nome: 'Cadeira Extensora', series: '2', reps: '12-15', descanso: '60-90s', carga: '', notas: '', concluido: false },
+              { nome: 'Panturrilha em Pé', series: '4', reps: '12-15', descanso: '60-90s', carga: '', notas: '', concluido: false },
+              { nome: 'Abdominal Supra (Solo)', series: '3', reps: '12-15', descanso: '60-90s', carga: '', notas: '', concluido: false }
+            ]
+          },
+          {
+            dia: 'Quarta',
+            foco: 'Push (Empurrar)',
+            exercicios: [
+              { nome: 'Supino Reto (Halteres)', series: '3', reps: '8-10', descanso: '2-3 min', carga: '', notas: '', concluido: false },
+              { nome: 'Crucifixo Inclinado (Halteres)', series: '3', reps: '10-12', descanso: '60-90s', carga: '', notas: '', concluido: false },
+              { nome: 'Elevação Lateral na Polia', series: '3', reps: '12-15', descanso: '60-90s', carga: '', notas: '', concluido: false },
+              { nome: 'Tríceps Paralelas ou Máquina', series: '2', reps: '8-10', descanso: '60-90s', carga: '', notas: '', concluido: false },
+              { nome: 'Tríceps Corda', series: '2', reps: '12-15', descanso: '60-90s', carga: '', notas: '', concluido: false },
+              { nome: 'Abdominal Infra (Elevação Pernas)', series: '3', reps: '12-15', descanso: '60-90s', carga: '', notas: '', concluido: false }
+            ]
+          },
+          {
+            dia: 'Quinta',
+            foco: 'Pull (Puxar)',
+            exercicios: [
+              { nome: 'Levantamento Terra (Barra)', series: '3', reps: '5-7', descanso: '2-3 min', carga: '', notas: '', concluido: false },
+              { nome: 'Puxada Alta Supinada', series: '3', reps: '8-10', descanso: '2-3 min', carga: '', notas: '', concluido: false },
+              { nome: 'Remada Baixa Unilateral na Polia', series: '3', reps: '8-10', descanso: '2-3 min', carga: '', notas: '', concluido: false },
+              { nome: 'Crucifixo Invertido (Cabo/Halteres)', series: '3', reps: '12-15', descanso: '60-90s', carga: '', notas: '', concluido: false },
+              { nome: 'Rosca Martelo (Halteres)', series: '2', reps: '10-12', descanso: '60-90s', carga: '', notas: '', concluido: false },
+              { nome: 'Rosca Inclinada (Halteres)', series: '2', reps: '10-12', descanso: '60-90s', carga: '', notas: '', concluido: false },
+              { nome: 'Abdominal Supra (Solo)', series: '3', reps: '12-15', descanso: '60-90s', carga: '', notas: '', concluido: false }
+            ]
+          },
+          {
+            dia: 'Sexta',
+            foco: 'Legs (Pernas completo)',
+            exercicios: [
+              { nome: 'Agachamento Livre', series: '3', reps: '8-10', descanso: '2-3 min', carga: '', notas: '', concluido: false },
+              { nome: 'Leg Press 45°', series: '3', reps: '10-12', descanso: '2-3 min', carga: '', notas: '', concluido: false },
+              { nome: 'Mesa Flexora', series: '4', reps: '10-12', descanso: '60-90s', carga: '', notas: '', concluido: false },
+              { nome: 'Cadeira Extensora', series: '2', reps: '12-15', descanso: '60-90s', carga: '', notas: '', concluido: false },
+              { nome: 'Panturrilha Sentado', series: '3', reps: '12-15', descanso: '60-90s', carga: '', notas: '', concluido: false },
+              { nome: 'Abdominal Infra (Elevação Pernas)', series: '3', reps: '12-15', descanso: '60-90s', carga: '', notas: '', concluido: false }
+            ]
+          }
+        ],
+        save() {
+          localStorage.setItem('my_dieta_v5', JSON.stringify(this.dieta));
+          localStorage.setItem('my_treinos_v4', JSON.stringify(this.treinos));
+          localStorage.setItem('my_agua_v1', JSON.stringify(this.garrafasBebeidas));
+        },
+        executeReset(resetNotes = false) {
+          this.dieta.forEach(item => item.concluido = false);
+          this.treinos.forEach(t => t.exercicios.forEach(e => {
+            e.concluido = false;
+            if (resetNotes) {
+              e.carga = '';
+              e.notas = '';
+            }
+          }));
+          this.garrafasBebeidas = 0;
+          this.save();
+        },
+        resetDayManual() {
+          this.executeReset(false);
+        }
+      }
+    }
+  </script>
+</body>
+</html>
