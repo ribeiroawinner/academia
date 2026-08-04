@@ -276,12 +276,29 @@
                         <button @click="incrementarCarga(ex)" class="bg-zinc-900 border border-zinc-700 text-zinc-300 rounded-lg px-2.5 py-1 text-xs font-mono font-bold active:scale-95 transition shrink-0">+</button>
                       </div>
                     </div>
-                    <!-- Notas -->
-                    <div>
-                      <label class="text-[8px] font-mono font-bold uppercase tracking-widest text-zinc-400 block mb-0.5">Notas</label>
-                      <input type="text" x-model="ex.notas" @change="save()" placeholder="Observações"
-                             class="bg-zinc-950 border border-zinc-700 focus:border-white rounded-lg px-2.5 py-1 w-full text-xs text-white placeholder-zinc-600 focus:outline-none font-mono transition-colors duration-150">
-                    </div>
+                    <!-- Gráfico de evolução de carga -->
+                    <template x-if="getHistoricoGrafico(activeTreino, index).length > 1">
+                      <div class="pt-1">
+                        <span class="text-[8px] font-mono text-zinc-500 uppercase tracking-widest">Evolução</span>
+                        <svg class="w-full mt-1" height="32" :viewBox="`0 0 ${getHistoricoGrafico(activeTreino, index).length * 20} 32`" preserveAspectRatio="none">
+                          <polyline
+                            :points="getGraficoPontos(activeTreino, index)"
+                            fill="none"
+                            :stroke="getGraficoCor(activeTreino, index)"
+                            stroke-width="1.5"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                          />
+                          <template x-for="(pt, pi) in getGraficoPontosArray(activeTreino, index)" :key="pi">
+                            <circle :cx="pt.x" :cy="pt.y" r="2" :fill="getGraficoCor(activeTreino, index)"/>
+                          </template>
+                        </svg>
+                        <div class="flex justify-between mt-0.5">
+                          <span class="text-[7px] font-mono text-zinc-600" x-text="getHistoricoGrafico(activeTreino, index)[0].carga"></span>
+                          <span class="text-[7px] font-mono text-zinc-400 font-bold" x-text="getHistoricoGrafico(activeTreino, index).slice(-1)[0].carga"></span>
+                        </div>
+                      </div>
+                    </template>
                   </div>
                 </div>
               </div>
@@ -603,6 +620,39 @@
           const novo = Math.max(0, num - step);
           ex.carga = novo + 'kg';
           this.save();
+        },
+        // Retorna últimas 7 entradas do histórico para o gráfico
+        getHistoricoGrafico(ti, ei) {
+          const hist = JSON.parse(localStorage.getItem('my_hist_cargas') || '{}');
+          const entries = hist[ti] && hist[ti][ei] ? hist[ti][ei] : [];
+          return entries.slice(-7);
+        },
+        getGraficoPontosArray(ti, ei) {
+          const dados = this.getHistoricoGrafico(ti, ei);
+          if (dados.length < 2) return [];
+          const valores = dados.map(d => this.getCargaNum(d.carga));
+          const min = Math.min(...valores);
+          const max = Math.max(...valores);
+          const range = max - min || 1;
+          const w = 20;
+          const h = 32;
+          const pad = 4;
+          return valores.map((v, i) => ({
+            x: i * w + w / 2,
+            y: h - pad - ((v - min) / range) * (h - pad * 2)
+          }));
+        },
+        getGraficoPontos(ti, ei) {
+          return this.getGraficoPontosArray(ti, ei).map(p => `${p.x},${p.y}`).join(' ');
+        },
+        getGraficoCor(ti, ei) {
+          const dados = this.getHistoricoGrafico(ti, ei);
+          if (dados.length < 2) return '#52525b';
+          const primeiro = this.getCargaNum(dados[0].carga);
+          const ultimo   = this.getCargaNum(dados[dados.length - 1].carga);
+          if (ultimo > primeiro) return '#4ade80';  // verde — evoluindo
+          if (ultimo < primeiro) return '#f87171';  // vermelho — regredindo
+          return '#71717a';                          // cinza — estável
         },
         executeReset(resetNotes = false) {
           this.dieta.forEach(item => item.concluido = false);
