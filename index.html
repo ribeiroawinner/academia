@@ -15,9 +15,12 @@
   <link rel="apple-touch-icon" sizes="152x152" href="favicon.png?v=4">
   <link rel="apple-touch-icon" sizes="120x120" href="favicon.png?v=4">
 
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Treino e Dieta">
+  <meta name="theme-color" content="#050505">
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -57,6 +60,22 @@
       color: #fecdd3;
       animation: alertPulse 1.8s infinite;
     }
+    .chip-warning {
+      background: rgba(50, 30, 5, 0.95);
+      border: 1px solid rgba(251, 146, 60, 0.9);
+      box-shadow: 0 0 12px rgba(251, 146, 60, 0.35);
+      color: #fed7aa;
+      animation: alertPulse 2.5s infinite;
+    }
+    /* card inteiro muda de borda conforme urgência */
+    .card-warning {
+      border-color: rgba(251, 146, 60, 0.5) !important;
+      box-shadow: 0 0 18px rgba(251, 146, 60, 0.15) !important;
+    }
+    .card-alert {
+      border-color: rgba(244, 63, 94, 0.6) !important;
+      box-shadow: 0 0 20px rgba(244, 63, 94, 0.2) !important;
+    }
     .chip-success {
       background: rgba(10, 35, 20, 0.9);
       border: 1px solid rgba(34, 197, 94, 0.8);
@@ -92,6 +111,16 @@
   </style>
 </head>
 <body class="text-zinc-100 min-h-screen pb-28 antialiased selection:bg-white selection:text-black" x-data="appData()" x-init="initApp(); checkAutoReset()">
+
+  <!-- Banner notificações -->
+  <div id="notif-banner" class="hidden fixed top-0 left-0 right-0 z-50 bg-zinc-900 border-b border-zinc-700 px-4 py-3 flex items-center justify-between gap-3">
+    <p class="text-xs text-zinc-300 font-mono">🔔 Ativar lembretes de refeição?</p>
+    <div class="flex gap-2 shrink-0">
+      <button onclick="document.getElementById('notif-banner').remove()" class="text-[10px] font-mono text-zinc-500 hover:text-zinc-300 px-2 py-1">Não</button>
+      <button onclick="solicitarNotificacoes().then(ok => { if(ok){ document.getElementById('notif-banner').remove(); const d=JSON.parse(localStorage.getItem('my_dieta_v5')||'[]'); agendarNotificacoes(d); } })" 
+              class="text-[10px] font-mono font-bold bg-white text-black px-3 py-1 rounded-lg active:scale-95">Ativar</button>
+    </div>
+  </div>
 
   <!-- Barra Superior -->
   <header class="sticky top-0 z-30 bg-black/80 backdrop-blur-xl border-b border-zinc-800/80 px-4 py-3">
@@ -150,7 +179,7 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
           <template x-for="(ref, index) in dieta" :key="index">
             <div class="p-4 rounded-2xl arch-card arch-card-hover transition-all duration-300 flex flex-col justify-between" 
-                 :class="ref.concluido ? 'opacity-35 bg-zinc-950/40 border-zinc-900 scale-[0.99]' : ''">
+                 :class="ref.concluido ? 'opacity-35 bg-zinc-950/40 border-zinc-900 scale-[0.99]' : (isAtrasado(ref.horarioFim) ? 'card-alert' : (isUrgente(ref.horario) ? 'card-warning' : ''))">
               <label class="flex items-start gap-3.5 cursor-pointer">
                 <input type="checkbox" x-model="ref.concluido" @change="save()" 
                        class="mt-1 w-4 h-4 accent-white bg-zinc-950 border-zinc-700 rounded cursor-pointer shrink-0 transition-transform active:scale-90">
@@ -160,9 +189,18 @@
                     <span class="text-[10px] font-mono font-extrabold px-2.5 py-0.5 rounded-md shrink-0 transition-all"
                           :class="ref.concluido ? 'chip-success' : 
                                  (isAtrasado(ref.horarioFim) ? 'chip-alert' : 
-                                 'chip-highlight')" 
-                          x-text="ref.concluido ? 'CONCLUÍDO' : (isAtrasado(ref.horarioFim) ? `ATRASADO (${ref.horario})` : ref.horario)"></span>
+                                 (isUrgente(ref.horario) ? 'chip-warning' :
+                                 'chip-highlight'))" 
+                          x-text="ref.concluido ? 'CONCLUÍDO' : (isAtrasado(ref.horarioFim) ? `ATRASADO (${ref.horario})` : (isUrgente(ref.horario) ? `⚠ ${ref.horario}` : ref.horario))"></span>
                   </div>
+
+                  <!-- Barra de progresso de tempo (só aparece se não concluído e horário próximo) -->
+                  <template x-if="!ref.concluido && (isUrgente(ref.horario) || isAtrasado(ref.horarioFim))">
+                    <div class="w-full bg-zinc-900 rounded-full h-1 overflow-hidden">
+                      <div class="h-full rounded-full transition-all duration-1000"
+                           :style="`width: ${getProgresso(ref.horario, ref.horarioFim)}%; background: ${getProgressoCor(ref.horario, ref.horarioFim)}`"></div>
+                    </div>
+                  </template>
                   
                   <p class="text-xs text-zinc-300 font-medium leading-relaxed" x-text="ref.itens"></p>
                   
@@ -350,6 +388,10 @@
             this.now = new Date();
             this.checkAutoReset();
           }, 15000);
+          // Agenda notificações se já tiver permissão
+          if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+            setTimeout(() => agendarNotificacoes(this.dieta), 500);
+          }
         },
         setTreinoAutoDia() {
           const currentDayIndex = new Date().getDay();
@@ -388,6 +430,33 @@
           const limitTime = new Date();
           limitTime.setHours(hours, minutes, 0, 0);
           return this.now > limitTime;
+        },
+        // Urgente = dentro de 45 minutos do horário de início
+        isUrgente(horarioStr) {
+          if (!horarioStr) return false;
+          const [hours, minutes] = horarioStr.split(':').map(Number);
+          const refTime = new Date();
+          refTime.setHours(hours, minutes, 0, 0);
+          const diff = (refTime - this.now) / 60000; // minutos
+          return diff >= 0 && diff <= 45;
+        },
+        // Progresso de 0 a 100 dentro da janela de urgência (45 min antes até horário fim)
+        getProgresso(horarioStr, horarioFimStr) {
+          if (!horarioStr || !horarioFimStr) return 0;
+          const [sh, sm] = horarioStr.split(':').map(Number);
+          const [eh, em] = horarioFimStr.split(':').map(Number);
+          const start = new Date(); start.setHours(sh, sm - 45, 0, 0); // 45 min antes
+          const end = new Date();   end.setHours(eh, em, 0, 0);
+          const total = end - start;
+          const elapsed = this.now - start;
+          return Math.min(100, Math.max(0, (elapsed / total) * 100));
+        },
+        // Cor da barra: laranja → vermelho conforme progresso
+        getProgressoCor(horarioStr, horarioFimStr) {
+          const p = this.getProgresso(horarioStr, horarioFimStr);
+          if (p < 60) return 'rgb(251,146,60)';  // laranja
+          if (p < 85) return 'rgb(239,68,68)';   // vermelho
+          return 'rgb(244,63,94)';                // vermelho forte
         },
         dieta: JSON.parse(localStorage.getItem('my_dieta_v5')) || [
           { horario: '07:30', horarioFim: '09:00', nome: '1. Café da Manhã', itens: '2 fatias pão de forma + 2 bananas + 2 ovos mexidos', obs: 'Opcional: Café puro. Preparo: 3 min.', concluido: false },
@@ -484,6 +553,79 @@
         }
       }
     }
+
+    // ── PWA + Notificações ──────────────────────────────────────────
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').then(reg => {
+        console.log('SW registrado:', reg.scope);
+      });
+    }
+
+    async function solicitarNotificacoes() {
+      if (!('Notification' in window)) {
+        alert('Seu navegador não suporta notificações.');
+        return false;
+      }
+      const perm = await Notification.requestPermission();
+      return perm === 'granted';
+    }
+
+    // Agenda notificações locais via setTimeout (funciona sem servidor push)
+    function agendarNotificacoes(dieta) {
+      if (Notification.permission !== 'granted') return;
+
+      dieta.forEach(ref => {
+        if (ref.concluido) return;
+
+        const [h, m] = ref.horario.split(':').map(Number);
+
+        // Aviso 30 min antes
+        const aviso30 = new Date();
+        aviso30.setHours(h, m - 30, 0, 0);
+        const ms30 = aviso30 - new Date();
+        if (ms30 > 0) {
+          setTimeout(() => {
+            if (Notification.permission === 'granted') {
+              new Notification('⏰ ' + ref.nome + ' em 30 min', {
+                body: ref.itens,
+                icon: '/favicon.png',
+                tag: 'aviso-' + ref.horario
+              });
+            }
+          }, ms30);
+        }
+
+        // Aviso na hora exata
+        const avisoExato = new Date();
+        avisoExato.setHours(h, m, 0, 0);
+        const msExato = avisoExato - new Date();
+        if (msExato > 0) {
+          setTimeout(() => {
+            if (Notification.permission === 'granted') {
+              new Notification('🍽️ Hora de comer! ' + ref.nome, {
+                body: ref.itens,
+                icon: '/favicon.png',
+                tag: 'hora-' + ref.horario,
+                requireInteraction: true
+              });
+            }
+          }, msExato);
+        }
+      });
+    }
+
+    // Inicializa notificações ao carregar
+    document.addEventListener('DOMContentLoaded', async () => {
+      if (Notification.permission === 'granted') {
+        // Já tem permissão, agenda direto
+        const dados = JSON.parse(localStorage.getItem('my_dieta_v5') || '[]');
+        if (dados.length) agendarNotificacoes(dados);
+      } else if (Notification.permission !== 'denied') {
+        // Mostra banner sutil para pedir permissão
+        const banner = document.getElementById('notif-banner');
+        if (banner) banner.classList.remove('hidden');
+      }
+    });
   </script>
 </body>
 </html>
