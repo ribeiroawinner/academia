@@ -585,11 +585,15 @@
         const ms30 = aviso30 - new Date();
         if (ms30 > 0) {
           setTimeout(() => {
+            const atual = JSON.parse(localStorage.getItem('my_dieta_v5') || '[]');
+            const item = atual.find(i => i.horario === ref.horario);
+            if (item && item.concluido) return;
             if (Notification.permission === 'granted') {
-              new Notification('⏰ ' + ref.nome + ' em 30 min', {
+              new Notification(ref.nome + ' em 30 minutos', {
                 body: ref.itens,
                 icon: '/favicon.png',
-                tag: 'aviso-' + ref.horario
+                tag: 'aviso-' + ref.horario,
+                silent: false
               });
             }
           }, ms30);
@@ -601,12 +605,16 @@
         const msExato = avisoExato - new Date();
         if (msExato > 0) {
           setTimeout(() => {
+            const atual = JSON.parse(localStorage.getItem('my_dieta_v5') || '[]');
+            const item = atual.find(i => i.horario === ref.horario);
+            if (item && item.concluido) return;
             if (Notification.permission === 'granted') {
-              new Notification('🍽️ Hora de comer! ' + ref.nome, {
+              new Notification('Hora de comer — ' + ref.nome, {
                 body: ref.itens,
                 icon: '/favicon.png',
                 tag: 'hora-' + ref.horario,
-                requireInteraction: true
+                requireInteraction: true,
+                silent: false
               });
             }
           }, msExato);
