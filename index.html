@@ -191,6 +191,14 @@
                                  (isAtrasado(ref.horario) ? 'chip-alert' : 'chip-highlight')" 
                           x-text="ref.concluido ? 'CONCLUÍDO' : (isAtrasado(ref.horario) ? `ATRASADO (${ref.horario})` : ref.horario)"></span>
                   </div>
+
+                  <!-- Barra cresce até o horário exato, some quando atrasa -->
+                  <template x-if="!ref.concluido && !isAtrasado(ref.horario)">
+                    <div class="w-full bg-zinc-900 rounded-full h-1 overflow-hidden">
+                      <div class="h-full rounded-full transition-all duration-1000"
+                           :style="`width: ${getProgresso(ref.horario)}%; background: ${getProgressoCor(ref.horario)}`"></div>
+                    </div>
+                  </template>
                   
                   <p class="text-xs text-zinc-300 font-medium leading-relaxed" x-text="ref.itens"></p>
                   
@@ -423,6 +431,22 @@
         },
         isUrgente(horarioStr, horarioFimStr) {
           return false; // sem janela de urgência
+        },
+        // Progresso 0→100 nas últimas 60 min antes do horário de início
+        getProgresso(horarioStr) {
+          if (!horarioStr) return 0;
+          const [h, m] = horarioStr.split(':').map(Number);
+          const inicio = new Date(this.now); inicio.setHours(h, m, 0, 0);
+          const start  = new Date(inicio.getTime() - 60 * 60000); // 60 min antes
+          const total  = inicio - start;
+          const elapsed = this.now - start;
+          return Math.min(100, Math.max(0, (elapsed / total) * 100));
+        },
+        getProgressoCor(horarioStr) {
+          const p = this.getProgresso(horarioStr);
+          if (p < 60) return 'rgb(251,146,60)';
+          if (p < 85) return 'rgb(239,68,68)';
+          return 'rgb(244,63,94)';
         },
         // Progresso de 0 a 100: começa 60 min antes do início, termina no horarioFim
         getProgresso(horarioStr, horarioFimStr) {
