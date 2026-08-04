@@ -48,10 +48,10 @@
       color: #ffffff;
     }
     .chip-sets {
-      background: rgba(45, 35, 10, 0.9);
-      border: 1px solid rgba(245, 158, 11, 0.8);
-      box-shadow: 0 0 10px rgba(245, 158, 11, 0.25);
-      color: #fbbf24;
+      background: rgba(10, 35, 15, 0.9);
+      border: 1px solid rgba(34, 197, 94, 0.8);
+      box-shadow: 0 0 10px rgba(34, 197, 94, 0.25);
+      color: #86efac;
     }
     .chip-alert {
       background: rgba(60, 10, 15, 0.95);
@@ -228,15 +228,15 @@
           </template>
         </div>
 
-        <div class="p-3.5 rounded-xl bg-zinc-900/90 border-l-4 border-amber-400 text-zinc-300 text-xs leading-relaxed space-y-1">
-          <span class="font-mono font-black uppercase text-[9px] text-amber-400 block tracking-widest">Aviso de Aquecimento</span>
+        <div class="p-3.5 rounded-xl bg-zinc-900/90 border-l-4 border-green-500 text-zinc-300 text-xs leading-relaxed space-y-1">
+          <span class="font-mono font-black uppercase text-[9px] text-green-400 block tracking-widest">Aviso de Aquecimento</span>
           <p>Realize 1 a 2 séries leves com carga reduzida no primeiro exercício antes da carga de trabalho.</p>
         </div>
 
         <div class="p-4 rounded-2xl arch-card flex justify-between items-center">
           <div>
             <span class="text-[9px] font-mono font-bold tracking-widest text-zinc-400 uppercase">Sessão Ativa</span>
-            <h3 class="text-sm sm:text-base font-black text-amber-300 tracking-wide" x-text="treinos[activeTreino].foco"></h3>
+            <h3 class="text-sm sm:text-base font-black text-green-400 tracking-wide" x-text="treinos[activeTreino].foco"></h3>
           </div>
           <span class="text-xs font-mono font-black chip-highlight px-3 py-1 rounded-md" x-text="`${treinos[activeTreino].exercicios.filter(e => e.concluido).length}/${treinos[activeTreino].exercicios.length}`"></span>
         </div>
@@ -261,7 +261,7 @@
                     <div>
                       <label class="text-[8px] font-mono font-bold uppercase tracking-widest text-zinc-400 block mb-0.5">Carga</label>
                       <input type="text" inputmode="decimal" x-model="ex.carga" @change="save()" placeholder="24kg" 
-                             class="bg-zinc-950 border border-zinc-700 focus:border-amber-400 rounded-lg px-2.5 py-1 w-full text-xs text-amber-300 font-bold placeholder-zinc-600 focus:outline-none font-mono transition-colors duration-150">
+                             class="bg-zinc-950 border border-zinc-700 focus:border-green-400 rounded-lg px-2.5 py-1 w-full text-xs text-green-300 font-bold placeholder-zinc-600 focus:outline-none font-mono transition-colors duration-150">
                     </div>
                     <div>
                       <label class="text-[8px] font-mono font-bold uppercase tracking-widest text-zinc-400 block mb-0.5">Notas</label>
