@@ -228,6 +228,19 @@
           </template>
         </div>
 
+        <!-- Tela de descanso (fim de semana ou activeTreino = -1) -->
+        <template x-if="activeTreino === -1">
+          <div class="p-8 rounded-2xl arch-card flex flex-col items-center justify-center gap-3 text-center">
+            <span class="text-4xl">🛌</span>
+            <h3 class="text-sm font-black text-white tracking-wide">Dia de Descanso</h3>
+            <p class="text-xs text-zinc-400 font-mono">Recuperação é parte do treino.</p>
+            <p class="text-[10px] text-zinc-600 font-mono">Selecione um dia acima para ver os exercícios.</p>
+          </div>
+        </template>
+
+        <!-- Conteúdo do treino (só quando dia de semana selecionado) -->
+        <template x-if="activeTreino >= 0">
+          <div class="space-y-4">
         <div class="p-3.5 rounded-xl bg-zinc-900/90 border-l-4 border-green-500 text-zinc-300 text-xs leading-relaxed space-y-1">
           <span class="font-mono font-black uppercase text-[9px] text-green-400 block tracking-widest">Aviso de Aquecimento</span>
           <p>Realize 1 a 2 séries leves com carga reduzida no primeiro exercício antes da carga de trabalho.</p>
@@ -305,6 +318,8 @@
             </div>
           </template>
         </div>
+          </div>
+        </template>
       </div>
     </template>
 
@@ -427,7 +442,7 @@
           if (currentDayIndex >= 1 && currentDayIndex <= 5) {
             this.activeTreino = currentDayIndex - 1;
           } else {
-            this.activeTreino = 0;
+            this.activeTreino = -1; // -1 = dia de descanso
           }
         },
         checkAutoReset() {
@@ -621,11 +636,33 @@
           ex.carga = novo + 'kg';
           this.save();
         },
-        // Retorna últimas 7 entradas do histórico para o gráfico
+        // Retorna últimas 7 entradas do histórico para o gráfico, preenchendo dias vazios com ponto neutro
         getHistoricoGrafico(ti, ei) {
           const hist = JSON.parse(localStorage.getItem('my_hist_cargas') || '{}');
-          const entries = hist[ti] && hist[ti][ei] ? hist[ti][ei] : [];
-          return entries.slice(-7);
+          const entries = hist[ti] && hist[ti][ei] ? [...hist[ti][ei]] : [];
+          if (entries.length === 0) return [];
+          // Preenche dias sem registro entre o primeiro e hoje com a última carga conhecida
+          const hoje = new Date();
+          const result = [];
+          let ultimaCarga = entries[0].carga;
+          // Pega os últimos 7 dias úteis (seg-sex)
+          const diasUteis = [];
+          for (let i = 13; i >= 0 && diasUteis.length < 7; i--) {
+            const d = new Date(hoje);
+            d.setDate(hoje.getDate() - i);
+            const dow = d.getDay();
+            if (dow >= 1 && dow <= 5) diasUteis.push(d.toDateString());
+          }
+          diasUteis.forEach(dataStr => {
+            const entry = entries.find(e => e.data === dataStr);
+            if (entry) {
+              ultimaCarga = entry.carga;
+              result.push({ data: dataStr, carga: entry.carga, neutro: false });
+            } else if (result.length > 0) {
+              result.push({ data: dataStr, carga: ultimaCarga, neutro: true });
+            }
+          });
+          return result.slice(-7);
         },
         getGraficoPontosArray(ti, ei) {
           const dados = this.getHistoricoGrafico(ti, ei);
@@ -648,11 +685,14 @@
         getGraficoCor(ti, ei) {
           const dados = this.getHistoricoGrafico(ti, ei);
           if (dados.length < 2) return '#52525b';
-          const primeiro = this.getCargaNum(dados[0].carga);
-          const ultimo   = this.getCargaNum(dados[dados.length - 1].carga);
-          if (ultimo > primeiro) return '#4ade80';  // verde — evoluindo
-          if (ultimo < primeiro) return '#f87171';  // vermelho — regredindo
-          return '#71717a';                          // cinza — estável
+          // Compara primeiro registro real com último registro real
+          const reais = dados.filter(d => !d.neutro);
+          if (reais.length < 2) return '#71717a';
+          const primeiro = this.getCargaNum(reais[0].carga);
+          const ultimo   = this.getCargaNum(reais[reais.length - 1].carga);
+          if (ultimo > primeiro) return '#4ade80';
+          if (ultimo < primeiro) return '#f87171';
+          return '#71717a';
         },
         executeReset(resetNotes = false) {
           this.dieta.forEach(item => item.concluido = false);
