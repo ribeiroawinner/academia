@@ -179,7 +179,7 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
           <template x-for="(ref, index) in dieta" :key="index">
             <div class="p-4 rounded-2xl arch-card arch-card-hover transition-all duration-300 flex flex-col justify-between" 
-                 :class="ref.concluido ? 'opacity-35 bg-zinc-950/40 border-zinc-900 scale-[0.99]' : (isAtrasado(ref.horarioFim) ? 'card-alert' : (isUrgente(ref.horario) ? 'card-warning' : ''))">
+                 :class="ref.concluido ? 'opacity-35 bg-zinc-950/40 border-zinc-900 scale-[0.99]' : ''">
               <label class="flex items-start gap-3.5 cursor-pointer">
                 <input type="checkbox" x-model="ref.concluido" @change="save()" 
                        class="mt-1 w-4 h-4 accent-white bg-zinc-950 border-zinc-700 rounded cursor-pointer shrink-0 transition-transform active:scale-90">
