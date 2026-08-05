@@ -174,6 +174,24 @@
             <div class="bg-white h-full transition-all duration-500 ease-out shadow-[0_0_10px_rgba(255,255,255,0.8)]"
                  :style="`width: ${(dieta.filter(i => i.concluido).length / dieta.length) * 100}%`"></div>
           </div>
+
+          <!-- Macros em tempo real -->
+          <div class="grid grid-cols-2 gap-2 pt-1">
+            <template x-for="macro in getMacros()" :key="macro.label">
+              <div>
+                <div class="flex justify-between mb-0.5">
+                  <span class="text-[8px] font-mono text-zinc-400 uppercase" x-text="macro.label"></span>
+                  <span class="text-[8px] font-mono font-bold"
+                        :class="macro.pct >= 100 ? 'text-green-400' : 'text-zinc-300'"
+                        x-text="`${macro.atual}${macro.unit} / ${macro.meta}${macro.unit}`"></span>
+                </div>
+                <div class="w-full bg-zinc-900 rounded-full h-1 overflow-hidden">
+                  <div class="h-full rounded-full transition-all duration-500"
+                       :style="`width: ${Math.min(macro.pct, 100)}%; background: ${macro.pct >= 100 ? '#4ade80' : macro.pct >= 70 ? '#fb923c' : '#71717a'}`"></div>
+                </div>
+              </div>
+            </template>
+          </div>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -467,6 +485,34 @@
             this.garrafasBebeidas--;
             this.save();
           }
+        },
+        getMacros() {
+          // Macros por refeição (aproximados): [kcal, prot, carbo, gord]
+          const macrosPorRefeicao = [
+            [420, 18, 58, 12],  // 1. Café da Manhã
+            [480, 27, 52, 16],  // 2. Lanche da Manhã
+            [510, 32, 74, 10],  // 3. Almoço
+            [430, 12, 72,  8],  // 4. Shake Pré-Treino
+            [530, 22, 98,  6],  // 5. Shake Pós-Treino
+            [570, 35, 90, 12],  // 6. Jantar
+            [490, 18, 38, 26],  // 7. Ceia
+          ];
+          const totais = [0, 0, 0, 0];
+          this.dieta.forEach((ref, i) => {
+            if (ref.concluido && macrosPorRefeicao[i]) {
+              macrosPorRefeicao[i].forEach((v, j) => totais[j] += v);
+            }
+          });
+          const metas   = [3430, 164, 482, 90];
+          const labels  = ['Calorias', 'Proteína', 'Carbos', 'Gordura'];
+          const units   = [' kcal', 'g', 'g', 'g'];
+          return labels.map((label, i) => ({
+            label,
+            unit:  units[i],
+            atual: totais[i],
+            meta:  metas[i],
+            pct:   Math.round((totais[i] / metas[i]) * 100)
+          }));
         },
         isAtrasado(horarioStr) {
           if (!horarioStr) return false;
