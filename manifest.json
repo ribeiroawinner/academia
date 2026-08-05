@@ -2,7 +2,7 @@
   "name": "Treino e Dieta",
   "short_name": "Academia",
   "description": "App de treino e dieta personalizado",
-  "start_url": "/",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#050505",
   "theme_color": "#050505",

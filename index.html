@@ -23,7 +23,7 @@
   <meta name="theme-color" content="#050505">
 
   <script src="https://cdn.tailwindcss.com"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.9/dist/cdn.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,700;0,800;1,400;1,700&display=swap" rel="stylesheet">
   <style>
     body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #050505; }
@@ -349,19 +349,19 @@
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
             <div class="p-2 bg-zinc-950 rounded-xl border border-zinc-800">
               <span class="text-[8px] font-mono text-zinc-400 block uppercase">Calorias</span>
-              <span class="text-xs font-mono font-black text-white">3120 kcal</span>
+              <span class="text-xs font-mono font-black text-white">3430 kcal</span>
             </div>
             <div class="p-2 bg-zinc-950 rounded-xl border border-zinc-800">
               <span class="text-[8px] font-mono text-zinc-400 block uppercase">Proteínas</span>
-              <span class="text-xs font-mono font-black text-white">142g</span>
+              <span class="text-xs font-mono font-black text-white">164g</span>
             </div>
             <div class="p-2 bg-zinc-950 rounded-xl border border-zinc-800">
               <span class="text-[8px] font-mono text-zinc-400 block uppercase">Carbos</span>
-              <span class="text-xs font-mono font-black text-white">420g</span>
+              <span class="text-xs font-mono font-black text-white">482g</span>
             </div>
             <div class="p-2 bg-zinc-950 rounded-xl border border-zinc-800">
               <span class="text-[8px] font-mono text-zinc-400 block uppercase">Gorduras</span>
-              <span class="text-xs font-mono font-black text-white">96g</span>
+              <span class="text-xs font-mono font-black text-white">90g</span>
             </div>
           </div>
           <p class="text-xs font-mono text-zinc-300 text-center pt-1">Meta de Peso: 55kg → 73kg</p>
@@ -521,9 +521,6 @@
           inicio.setHours(hours, minutes, 0, 0);
           return this.now > inicio;
         },
-        isUrgente(horarioStr, horarioFimStr) {
-          return false; // sem janela de urgência
-        },
         // Progresso 0→100 nos 30 min antes do horário exato
         getProgresso(horarioStr) {
           if (!horarioStr) return 0;
@@ -536,9 +533,9 @@
         },
         getProgressoCor(horarioStr) {
           const p = this.getProgresso(horarioStr);
-          if (p < 50) return 'rgb(251,146,60)';  // laranja
-          if (p < 80) return 'rgb(239,68,68)';   // vermelho
-          return 'rgb(244,63,94)';                // vermelho forte
+          if (p < 50) return 'rgb(251,146,60)';
+          if (p < 80) return 'rgb(239,68,68)';
+          return 'rgb(244,63,94)';
         },
         // Barra aparece só nos 30 min antes, some quando atrasado ou concluído
         mostrarBarra(horarioStr) {
@@ -547,24 +544,6 @@
           const fim   = new Date(this.now); fim.setHours(h, m, 0, 0);
           const start = new Date(fim.getTime() - 30 * 60000);
           return this.now >= start && this.now <= fim;
-        },
-        // Progresso de 0 a 100: começa 60 min antes do início, termina no horarioFim
-        getProgresso(horarioStr, horarioFimStr) {
-          if (!horarioStr || !horarioFimStr) return 0;
-          const [sh, sm] = horarioStr.split(':').map(Number);
-          const [eh, em] = horarioFimStr.split(':').map(Number);
-          const start = new Date(this.now); start.setHours(sh, sm - 60, 0, 0);
-          const end   = new Date(this.now); end.setHours(eh, em, 0, 0);
-          const total = end - start;
-          const elapsed = this.now - start;
-          return Math.min(100, Math.max(0, (elapsed / total) * 100));
-        },
-        // Cor da barra: laranja → vermelho conforme progresso
-        getProgressoCor(horarioStr, horarioFimStr) {
-          const p = this.getProgresso(horarioStr, horarioFimStr);
-          if (p < 60) return 'rgb(251,146,60)';
-          if (p < 85) return 'rgb(239,68,68)';
-          return 'rgb(244,63,94)';
         },
         dieta: JSON.parse(localStorage.getItem('my_dieta_v5')) || [
           { horario: '07:30', horarioFim: '09:00', nome: '1. Café da Manhã', itens: '2 fatias pão de forma + 2 bananas + 2 ovos mexidos', obs: 'Opcional: Café puro. Preparo: 3 min.', concluido: false },
@@ -768,7 +747,7 @@
 
     // ── PWA + Notificações ──────────────────────────────────────────
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(e => console.warn('SW erro:', e));
+      navigator.serviceWorker.register('sw.js').catch(e => console.warn('SW erro:', e));
     }
 
     async function solicitarNotificacoes() {
@@ -812,11 +791,21 @@
       return grupos;
     }
 
-    // Agenda notificações locais via setTimeout
+    function enviarAgendaParaSW(dieta) {
+      if (!dieta || !dieta.length) return;
+      if (!('serviceWorker' in navigator)) return;
+      navigator.serviceWorker.ready.then(reg => {
+        reg.active?.postMessage({ type: 'SCHEDULE_NOTIFICATIONS', refeicoes: dieta });
+      }).catch(e => console.warn('SW agenda erro:', e));
+    }
+
+    // Agenda notificações: delega ao SW quando disponível, senão usa setTimeout local
     function agendarNotificacoes(dieta) {
       if (!dieta || !dieta.length) return;
       if (typeof Notification === 'undefined') return;
       if (Notification.permission !== 'granted') return;
+
+      enviarAgendaParaSW(dieta);
 
       const pendentes = dieta.filter(r => !r.concluido);
       const grupos = agrupar(pendentes);
@@ -831,7 +820,6 @@
 
         const corpo = grupo.map(r => r.itens).join(' | ');
 
-        // Aviso 15 min antes
         const aviso15 = new Date();
         aviso15.setHours(h, m - 15, 0, 0);
         const ms15 = aviso15 - new Date();
@@ -841,7 +829,7 @@
               try {
                 new Notification(titulo + ' às ' + primeiro.horario, {
                   body: corpo,
-                  icon: '/favicon.png',
+                  icon: 'favicon.png',
                   tag: 'aviso-' + primeiro.horario
                 });
               } catch(e) { console.warn('Notif erro:', e); }
@@ -849,7 +837,6 @@
           }, ms15);
         }
 
-        // Aviso na hora exata — travado até tocar
         const avisoExato = new Date();
         avisoExato.setHours(h, m, 0, 0);
         const msExato = avisoExato - new Date();
@@ -859,7 +846,7 @@
               try {
                 new Notification('Hora de comer — ' + titulo, {
                   body: corpo,
-                  icon: '/favicon.png',
+                  icon: 'favicon.png',
                   tag: 'hora-' + primeiro.horario,
                   requireInteraction: true
                 });
